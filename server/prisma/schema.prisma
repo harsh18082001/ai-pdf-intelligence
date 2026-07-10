@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Document {
+  id        Int      @id @default(autoincrement())
+  title     String
+  fileName  String
+  filePath  String
+  fileSize  Int
+  pageCount Int      @default(0)
+  text      String?
+  status    String   @default("pending") // pending, processing, completed, failed, ocr_required
+  errorMsg  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  chunks    Chunk[]
+  messages  Message[]
+  artifacts AIArtifact[]
+
+  @@map("documents")
+}
+
+model Chunk {
+  id         Int      @id @default(autoincrement())
+  documentId Int
+  chunkIndex Int
+  text       String
+  tokenCount Int
+  embedding  Bytes?   // Storing Float32Array as Buffer
+  
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("chunks")
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  documentId Int
+  role       String   // user, assistant, system
+  content    String
+  createdAt  DateTime @default(now())
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("messages")
+}
+
+model AIArtifact {
+  id         Int      @id @default(autoincrement())
+  documentId Int
+  type       String   // summary, key_points, insights, etc.
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, type])
+  @@map("ai_artifacts")
+}
