@@ -1,3 +1,5 @@
+version: '2'
+
 services:
   backend:
     build:
@@ -12,8 +14,8 @@ services:
       - CORS_ORIGIN=http://localhost:8080
       - HF_API_TOKEN=${HF_API_TOKEN}
     volumes:
-      - server-uploads:/app/uploads
-      - server-data:/app/data
+      - ./server/uploads:/app/uploads
+      - ./server/data:/app/data
     restart: unless-stopped
 
   frontend:
@@ -25,7 +27,3 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-
-volumes:
-  server-uploads:
-  server-data:
