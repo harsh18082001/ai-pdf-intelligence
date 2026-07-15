@@ -24,19 +24,133 @@ You can ask specific questions like *"What is the main conclusion of chapter 3?"
 
 ---
 
-## 🏗️ Architectural Deep Dive
-DocIQ is built using a highly decoupled, modern tech stack designed for speed and simplicity.
+## 🏗️ System Architecture
 
-### The Frontend (Client)
-- **Framework:** React 19 powered by Vite for lightning-fast HMR and building.
-- **State Management:** Redux Toolkit & RTK Query handle all API caching, ensuring we never fetch the same data twice.
-- **Styling:** Tailwind CSS v4 combined with Shadcn UI for a robust, accessible design system.
-- **PDF Rendering:** `react-pdf` is utilized to render the actual PDF binary alongside the chat window.
+```mermaid
+graph TB
+    subgraph Client ["🖥️ Frontend (React 19 + Vite)"]
+        UI[Upload UI / Chat UI / PDF Viewer]
+        RTK[Redux Toolkit + RTK Query]
+    end
 
-### The Backend (Server)
-- **Framework:** Node.js with Express 5, providing a robust, async-first API layer.
-- **Database:** Prisma ORM connected to an **SQLite** database. SQLite was chosen for this MVP to allow the entire application to run off a single persistent disk without needing external database clusters.
-- **AI Integration:** The `@huggingface/inference` SDK connects the backend directly to Hugging Face. We use `Qwen/Qwen2.5-7B-Instruct` for intelligent chat completions, and `all-MiniLM-L6-v2` for generating embeddings.
+    subgraph Server ["⚙️ Backend (Node.js + Express 5)"]
+        API[REST API Routes]
+        DS[Document Service]
+        PS[Processing Service]
+        CS[Chat Service]
+        CMD[Command Service]
+        AI[AI Service]
+    end
+
+    subgraph DB ["💾 Storage (SQLite + Prisma)"]
+        DOC[(Documents)]
+        CHK[(Chunks + Embeddings)]
+        MSG[(Chat Messages)]
+        ART[(AI Artifacts Cache)]
+    end
+
+    subgraph HF ["🤗 Hugging Face API"]
+        LLM[Qwen2.5-7B-Instruct]
+        EMB[all-MiniLM-L6-v2]
+    end
+
+    UI --> RTK --> API
+    API --> DS & CS & CMD
+    DS --> PS
+    PS --> AI --> EMB
+    PS --> CHK
+    CS --> AI --> LLM
+    CS --> CHK & MSG
+    CMD --> AI --> LLM
+    CMD --> ART
+    DS --> DOC
+```
+
+### Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Frontend** | React 19, Vite, TypeScript | UI Framework & Build Tool |
+| **State** | Redux Toolkit, RTK Query | API Caching & State Management |
+| **Styling** | Tailwind CSS v4, Shadcn UI | Design System & Components |
+| **PDF Viewer** | react-pdf | In-browser PDF rendering |
+| **Backend** | Node.js, Express 5 | Async-first API Server |
+| **Database** | Prisma ORM, SQLite | Zero-config persistent storage |
+| **AI Chat** | Qwen/Qwen2.5-7B-Instruct | LLM for Q&A and commands |
+| **AI Embeddings** | all-MiniLM-L6-v2 | 384-dim vector embeddings |
+| **PDF Parsing** | unpdf | Serverless PDF text extraction |
+| **DevOps** | Docker, Docker Compose | Containerized deployment |
+
+---
+
+## 🔄 How It Works — End-to-End Flows
+
+### Flow 1: PDF Upload & Processing Pipeline
+
+```mermaid
+flowchart LR
+    A["📄 User uploads PDF"] --> B["💾 Save file to disk"]
+    B --> C["📝 Extract text via unpdf"]
+    C --> D{"Text found?"}
+    D -- Yes --> E["✂️ Split into ~512 token chunks\nwith 50 token overlap"]
+    D -- No --> F["⚠️ Mark as OCR_REQUIRED"]
+    E --> G["🤗 Batch generate embeddings\n(all-MiniLM-L6-v2)"]
+    G --> H["💾 Store chunks + embeddings\nin SQLite as binary BLOBs"]
+    H --> I["✅ Status = COMPLETED"]
+```
+
+**What happens when you upload a PDF:**
+1. The file is saved to disk and a database record is created with status `PROCESSING`.
+2. `unpdf` extracts all the raw text from the PDF pages.
+3. The text is split into overlapping chunks of ~512 tokens each (so no information is lost between chunk boundaries).
+4. All chunks are sent to Hugging Face in a batch to generate 384-dimensional vector embeddings.
+5. The chunks and their embeddings are stored in SQLite. The document status becomes `COMPLETED`.
+
+---
+
+### Flow 2: Chat with Your PDF (The RAG Pipeline)
+
+```mermaid
+flowchart LR
+    A["💬 User asks a question"] --> B["🤗 Convert question\ninto embedding vector"]
+    B --> C["📊 Calculate cosine similarity\nagainst ALL document chunks"]
+    C --> D["🏆 Pick Top 5\nmost relevant chunks"]
+    D --> E["📋 Build prompt:\nSystem Instructions\n+ Top 5 Chunks as Context\n+ User's Question"]
+    E --> F["🤗 Send to LLM\n(Qwen2.5-7B-Instruct)"]
+    F --> G["📡 Stream response\ntoken-by-token via SSE"]
+    G --> H["💾 Save full response\nto chat history"]
+```
+
+**What happens when you ask a question:**
+1. Your question is converted into an embedding vector (same model used during upload).
+2. The backend loads all chunks for that document and calculates the **Cosine Similarity** between your question vector and each chunk vector.
+3. The top 5 most relevant chunks are selected.
+4. A prompt is built: *"Here is context from the document: [top 5 chunks]. Answer this question: [your question]"*
+5. The prompt is sent to the LLM, which streams its answer back token-by-token via **Server-Sent Events (SSE)**.
+6. The complete answer is saved to the database as chat history.
+
+---
+
+### Flow 3: One-Click AI Commands (Summary / Key Points / Insights)
+
+```mermaid
+flowchart LR
+    A["⚡ User clicks\n'Generate Summary'"] --> B{"🔍 Check cache:\nAlready generated?"}
+    B -- Yes --> C["⚡ Return cached result\ninstantly"]
+    B -- No --> D["📋 Load all chunks\nfor the document"]
+    D --> E["📋 Build specialized prompt\n(e.g. 'Summarize this document...')"]
+    E --> F["🤗 Send to LLM\n(Qwen2.5-7B-Instruct)"]
+    F --> G["💾 Cache result in\nAI Artifacts table"]
+    G --> H["📄 Return result to user"]
+```
+
+**What happens when you click an AI command:**
+1. The backend first checks if this command was already run for this document (cache lookup).
+2. If cached, it returns the result instantly without calling the AI again.
+3. If not cached, it loads all the document chunks, builds a specialized prompt (different for Summary vs Key Points vs Insights), and sends it to the LLM.
+4. The result is cached in the database so future clicks are instant.
+
+---
 
 ### How the AI Actually Works (The RAG Pipeline)
 1. **Extraction:** When a PDF is uploaded, `unpdf` extracts all the raw text.
