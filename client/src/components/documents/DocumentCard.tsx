@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import type { DocumentDTO } from '@/types';
 import { useDeleteDocumentMutation } from '@/api/documentApi';
+import { deletePDF } from '@/services/pdfStorage';
 import { toast } from 'sonner';
 
 interface DocumentCardProps {
@@ -21,6 +22,7 @@ export function DocumentCard({ document }: DocumentCardProps) {
     if (window.confirm('Are you sure you want to delete this document?')) {
       try {
         await deleteDocument(document.id).unwrap();
+        await deletePDF(document.id);
         toast.success('Document deleted');
       } catch (error: any) {
         toast.error(error?.data?.error || 'Failed to delete document');

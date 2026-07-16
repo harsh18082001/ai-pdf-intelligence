@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { UploadDropzone } from './UploadDropzone';
 import { useUploadDocumentMutation } from '@/api/documentApi';
+import { savePDF } from '@/services/pdfStorage';
 import { toast } from 'sonner';
 
 export function UploadModal() {
@@ -18,7 +19,9 @@ export function UploadModal() {
 
   const handleUpload = async (file: File) => {
     try {
-      await uploadDocument(file).unwrap();
+      const doc = await uploadDocument(file).unwrap();
+      await savePDF(doc.id, file);
+      
       toast.success('Document uploaded successfully');
       setOpen(false);
     } catch (error: any) {
@@ -40,7 +43,7 @@ export function UploadModal() {
             Upload a PDF document to extract insights, chat, and summarize.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
+        <div className="py-4 w-full overflow-hidden">
           <UploadDropzone onFileSelect={handleUpload} isLoading={isLoading} />
         </div>
       </DialogContent>

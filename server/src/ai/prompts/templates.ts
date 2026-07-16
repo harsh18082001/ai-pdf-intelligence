@@ -1,10 +1,11 @@
 import type { ChatMessage } from '../ai.types.js';
 import { MESSAGE_ROLES } from '../../config/constants.js';
+import type { MessageDTO } from '../../types/index.js';
 
-export function buildQAPrompt(question: string, contextChunks: string[]): ChatMessage[] {
+export function buildQAPrompt(question: string, contextChunks: string[], history: MessageDTO[] = []): ChatMessage[] {
   const context = contextChunks.join('\n\n---\n\n');
   
-  return [
+  const messages: ChatMessage[] = [
     {
       role: MESSAGE_ROLES.SYSTEM,
       content: `You are a helpful AI assistant. Answer the user's question based ONLY on the provided document context below. 
@@ -14,11 +15,24 @@ Do NOT make up information. Use Markdown formatting where appropriate (e.g., bul
 Context:
 ${context}`,
     },
-    {
-      role: MESSAGE_ROLES.USER,
-      content: question,
-    },
   ];
+
+  // Map history correctly ensuring valid roles
+  for (const msg of history) {
+    if (msg.role === MESSAGE_ROLES.USER || msg.role === MESSAGE_ROLES.ASSISTANT) {
+      messages.push({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+      });
+    }
+  }
+
+  messages.push({
+    role: MESSAGE_ROLES.USER,
+    content: question,
+  });
+
+  return messages;
 }
 
 export function buildSummaryPrompt(chunks: string[]): ChatMessage[] {

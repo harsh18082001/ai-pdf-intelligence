@@ -6,7 +6,6 @@ export class DocumentRepository {
   async create(data: {
     title: string;
     fileName: string;
-    filePath: string;
     fileSize: number;
   }): Promise<Document> {
     return prisma.document.create({
@@ -43,12 +42,11 @@ export class DocumentRepository {
 
   async updateProcessingResult(
     id: number,
-    data: { text: string; pageCount: number; status: string; errorMsg?: string }
+    data: { pageCount: number; status: string; errorMsg?: string }
   ): Promise<Document> {
     return prisma.document.update({
       where: { id },
       data: {
-        text: data.text,
         pageCount: data.pageCount,
         status: data.status,
         errorMsg: data.errorMsg || null,

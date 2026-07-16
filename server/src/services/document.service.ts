@@ -1,8 +1,8 @@
-import fs from 'fs/promises';
 import { documentRepository } from '../repositories/document.repository.js';
-import { chunkRepository } from '../repositories/chunk.repository.js';
+import type { UploadedFile } from 'express-fileupload';
 import { messageRepository } from '../repositories/message.repository.js';
 import { aiArtifactRepository } from '../repositories/ai-artifact.repository.js';
+import { pineconeService } from './pinecone.service.js';
 import { processDocumentAsync } from '../workers/processor.js';
 import { AppError } from '../middlewares/error-handler.js';
 import type { DocumentDTO } from '../types/index.js';
@@ -23,18 +23,19 @@ function toDTO(doc: Document): DocumentDTO {
 }
 
 class DocumentService {
-  async upload(file: Express.Multer.File): Promise<DocumentDTO> {
+  async upload(file: UploadedFile): Promise<DocumentDTO> {
     const doc = await documentRepository.create({
-      title: file.originalname,
-      fileName: file.filename,
-      filePath: file.path,
+      title: file.name,
+      fileName: file.name,
       fileSize: file.size,
     });
 
-    // Start background processing
-    processDocumentAsync(doc.id);
+    // Wait for processing to complete synchronously so Vercel Serverless doesn't kill it
+    await processDocumentAsync(doc.id, file.data);
 
-    return toDTO(doc);
+    // Fetch the updated document with its new status
+    const updatedDoc = await documentRepository.findById(doc.id);
+    return toDTO(updatedDoc || doc);
   }
 
   async list(): Promise<DocumentDTO[]> {
@@ -50,28 +51,16 @@ class DocumentService {
     return toDTO(doc);
   }
 
-  async getFilePath(id: number): Promise<string> {
-    const doc = await documentRepository.findById(id);
-    if (!doc) {
-      throw new AppError('Document not found', 404);
-    }
-    return doc.filePath;
-  }
-
   async delete(id: number): Promise<void> {
     const doc = await documentRepository.findById(id);
     if (!doc) {
       throw new AppError('Document not found', 404);
     }
 
-    try {
-      await fs.unlink(doc.filePath);
-    } catch (error) {
-      logger.warn({ err: error, filePath: doc.filePath }, 'Failed to delete file from disk');
-    }
+    // Delete vectors from Pinecone
+    await pineconeService.deleteByDocumentId(id);
 
-    // Prisma's onDelete: Cascade will handle chunks, messages, and artifacts,
-    // but just in case, we can rely on Prisma.
+    // Prisma's onDelete: Cascade will handle chunks, messages, and artifacts
     await documentRepository.delete(id);
   }
 

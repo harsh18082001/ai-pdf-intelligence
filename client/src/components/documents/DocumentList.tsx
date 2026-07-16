@@ -1,13 +1,47 @@
-import { useGetDocumentsQuery } from '@/api/documentApi';
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { useGetDocumentsQuery, documentApi } from '@/api/documentApi';
+import { supabase } from '@/lib/supabase';
 import { DocumentCard } from './DocumentCard';
 import { FileText, Loader2 } from 'lucide-react';
 import { UploadModal } from './UploadModal';
 
 export function DocumentList() {
-  // Poll every 3 seconds if any document is processing, otherwise poll every 10 seconds just in case
-  const { data: documents = [], isLoading, error } = useGetDocumentsQuery(undefined, {
-    pollingInterval: 5000,
-  });
+  const dispatch = useDispatch();
+  const { data: documents = [], isLoading, error } = useGetDocumentsQuery();
+
+  useEffect(() => {
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      return;
+    }
+
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'documents',
+        },
+        (payload) => {
+          // Manually update the RTK Query cache when the DB changes
+          dispatch(
+            documentApi.util.updateQueryData('getDocuments', undefined, (draft) => {
+              const docIndex = draft.findIndex((d) => d.id === payload.new.id);
+              if (docIndex !== -1) {
+                draft[docIndex] = { ...draft[docIndex], ...payload.new };
+              }
+            })
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [dispatch]);
 
   if (isLoading) {
     return (

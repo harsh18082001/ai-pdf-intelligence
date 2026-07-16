@@ -19,10 +19,13 @@ class CommandService {
       throw new AppError('Document is not ready. Current status: ' + doc.status, 400);
     }
 
-    // 1. Check cache if not regenerating
+    // 1. Check database if not regenerating
     if (!regenerate) {
+      console.log(`[Command] Checking database for ${command} on document ${documentId}`);
       const cached = await aiArtifactRepository.findByDocumentAndType(documentId, command);
+      
       if (cached) {
+        console.log(`[Command] Cache hit in PostgreSQL for ${command}`);
         return {
           id: cached.id,
           documentId: cached.documentId,
@@ -32,6 +35,7 @@ class CommandService {
           updatedAt: cached.updatedAt.toISOString(),
         };
       }
+      console.log(`[Command] Cache miss. Generating from LLM...`);
     }
 
     // 2. Fetch all chunks
@@ -62,10 +66,10 @@ class CommandService {
     // 4. Generate content
     const content = await aiService.chatCompletion({ messages });
 
-    // 5. Save to cache
+    // 5. Save to database
     const artifact = await aiArtifactRepository.upsert(documentId, command, content);
 
-    return {
+    const artifactDTO: AIArtifactDTO = {
       id: artifact.id,
       documentId: artifact.documentId,
       type: artifact.type,
@@ -73,6 +77,8 @@ class CommandService {
       createdAt: artifact.createdAt.toISOString(),
       updatedAt: artifact.updatedAt.toISOString(),
     };
+
+    return artifactDTO;
   }
 }
 

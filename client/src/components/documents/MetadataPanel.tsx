@@ -1,5 +1,4 @@
-import { useGetDocumentQuery, useGetDocumentStatusQuery } from '@/api/documentApi';
-import { useExecuteCommandMutation } from '@/api/commandApi';
+import { useGetDocumentQuery } from '@/api/documentApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,6 +11,7 @@ import { useAppDispatch } from '@/store/hooks';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useExecuteCommandMutation } from '@/api/commandApi';
 
 interface MetadataPanelProps {
   documentId: number;
@@ -45,20 +45,7 @@ export function MetadataPanel({ documentId }: MetadataPanelProps) {
     }
   };
 
-  // Poll status every 3 seconds if not completed or failed
-  const { data: statusData } = useGetDocumentStatusQuery(documentId, {
-    pollingInterval: document && !['completed', 'failed', 'ocr_required'].includes(document.status) ? 3000 : 0,
-    skip: !document,
-  });
-
-  const currentStatus = statusData?.status || document?.status || 'pending';
-
-  // Invalidate main document query if status changes to update full details (like pageCount)
-  useEffect(() => {
-    if (statusData?.status === 'completed' && document?.status !== 'completed') {
-      dispatch(documentApi.util.invalidateTags([{ type: 'Document', id: documentId }]));
-    }
-  }, [statusData?.status, document?.status, documentId, dispatch]);
+  const currentStatus = document?.status || 'pending';
 
   const getStatusConfig = (status: string) => {
     switch (status) {
@@ -137,11 +124,11 @@ export function MetadataPanel({ documentId }: MetadataPanelProps) {
           </div>
         </div>
 
-        {statusData?.errorMsg && (
+        {document.errorMsg && (
           <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
             <p className="text-xs text-destructive flex gap-2">
               <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{statusData.errorMsg}</span>
+              <span>{document.errorMsg}</span>
             </p>
           </div>
         )}

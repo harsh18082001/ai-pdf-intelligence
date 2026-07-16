@@ -54,8 +54,8 @@ export function UploadDropzone({ onFileSelect, isLoading }: UploadDropzoneProps)
 
   if (selectedFile) {
     return (
-      <div className="border border-border rounded-lg p-6 flex flex-col items-center justify-center gap-4 bg-muted/30">
-        <div className="flex items-center gap-3 w-full bg-background p-4 rounded-md border">
+      <div className="border border-border rounded-lg p-6 flex flex-col items-center justify-center gap-4 bg-muted/30 w-full overflow-hidden">
+        <div className="flex items-center gap-3 w-full bg-background p-4 rounded-md border overflow-hidden">
           <FileIcon className="h-8 w-8 text-primary shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{selectedFile.name}</p>

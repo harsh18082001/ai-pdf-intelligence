@@ -1,9 +1,8 @@
 import { documentRepository } from '../repositories/document.repository.js';
 import { messageRepository } from '../repositories/message.repository.js';
-import { chunkRepository } from '../repositories/chunk.repository.js';
 import { aiService } from '../ai/ai.service.js';
+import { pineconeService } from './pinecone.service.js';
 import { buildQAPrompt } from '../ai/prompts/templates.js';
-import { findTopKChunks } from '../utils/embeddings.js';
 import { AppError } from '../middlewares/error-handler.js';
 import { TOP_K_CHUNKS, DOCUMENT_STATUS, MESSAGE_ROLES } from '../config/constants.js';
 import type { MessageDTO, StreamCallback } from '../types/index.js';
@@ -26,18 +25,27 @@ class ChatService {
     // Generate embedding for user query
     const queryEmbedding = await aiService.generateEmbedding(userMessage);
 
-    // Retrieve chunks
-    const chunks = await chunkRepository.findWithEmbeddings(documentId);
-    if (chunks.length === 0) {
+    // Retrieve chunks from Pinecone
+    const topChunks = await pineconeService.querySimilar(documentId, queryEmbedding, TOP_K_CHUNKS);
+    if (topChunks.length === 0) {
       throw new AppError('No document content available for context', 400);
     }
 
-    // Find top chunks
-    const topChunks = findTopKChunks(queryEmbedding, chunks, TOP_K_CHUNKS);
     const contextTexts = topChunks.map((c) => c.text);
 
+    // Retrieve previous messages for chat history (exclude the current user message we just saved at the very end)
+    const allMessages = await messageRepository.findByDocumentId(documentId);
+    const priorMessages = allMessages.slice(0, -1); // Remove the newly saved user message
+    const history = priorMessages.slice(-6).map(m => ({
+      id: m.id,
+      documentId: m.documentId,
+      role: m.role,
+      content: m.content,
+      createdAt: m.createdAt.toISOString()
+    }));
+
     // Build prompt
-    const messages = buildQAPrompt(userMessage, contextTexts);
+    const messages = buildQAPrompt(userMessage, contextTexts, history);
 
     return { messages };
   }

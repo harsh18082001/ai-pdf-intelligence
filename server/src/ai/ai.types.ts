@@ -17,7 +17,7 @@ export interface AIProvider {
 }
 
 export interface AIServiceConfig {
-  provider: 'huggingface' | 'openai' | 'ollama';
+  provider: 'huggingface' | 'openai' | 'ollama' | 'gemini';
   apiToken: string;
   chatModel: string;
   embeddingModel: string;

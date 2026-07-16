@@ -7,8 +7,6 @@ import {
   listDocuments,
   getDocument,
   deleteDocument,
-  getDocumentStatus,
-  downloadDocument,
 } from '../controllers/document.controller.js';
 
 const router = Router();
@@ -20,8 +18,6 @@ const router = Router();
 router.post('/', uploadPdf, asyncHandler(uploadDocument));
 router.get('/', asyncHandler(listDocuments));
 router.get('/:id', asyncHandler(getDocument));
-router.get('/:id/status', asyncHandler(getDocumentStatus));
-router.get('/:id/download', asyncHandler(downloadDocument));
 router.delete('/:id', asyncHandler(deleteDocument));
 
 export default router;

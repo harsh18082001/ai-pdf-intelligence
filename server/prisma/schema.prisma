@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -11,10 +11,8 @@ model Document {
   id        Int      @id @default(autoincrement())
   title     String
   fileName  String
-  filePath  String
   fileSize  Int
   pageCount Int      @default(0)
-  text      String?
   status    String   @default("pending") // pending, processing, completed, failed, ocr_required
   errorMsg  String?
   createdAt DateTime @default(now())
@@ -33,7 +31,6 @@ model Chunk {
   chunkIndex Int
   text       String
   tokenCount Int
-  embedding  Bytes?   // Storing Float32Array as Buffer
   
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 

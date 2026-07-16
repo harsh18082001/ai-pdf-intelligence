@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { loadPDF } from '@/services/pdfStorage';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -18,8 +19,19 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [pageInput, setPageInput] = useState<string>('1');
-
   const [isMaximized, setIsMaximized] = useState(false);
+  const [pdfFile, setPdfFile] = useState<Blob | null>(null);
+  const [loadingLocal, setLoadingLocal] = useState(true);
+
+  useEffect(() => {
+    const fetchLocalPDF = async () => {
+      setLoadingLocal(true);
+      const file = await loadPDF(documentId);
+      setPdfFile(file);
+      setLoadingLocal(false);
+    };
+    fetchLocalPDF();
+  }, [documentId]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
@@ -107,21 +119,31 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
 
       {/* PDF Document Container */}
       <div className="flex-1 overflow-auto bg-muted/20 relative flex justify-center p-4">
-        <Document
-          file={`/api/documents/${documentId}/download`}
-          onLoadSuccess={onDocumentLoadSuccess}
-          loading={
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <span className="animate-pulse">Loading PDF...</span>
-            </div>
-          }
-          error={
-            <div className="flex flex-col items-center justify-center h-full text-destructive">
-              Failed to load PDF.
-            </div>
-          }
-          className="flex flex-col items-center shadow-lg"
-        >
+        {loadingLocal ? (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <span className="animate-pulse">Loading local PDF...</span>
+          </div>
+        ) : !pdfFile ? (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+            <p>PDF not available locally.</p>
+            <p className="text-sm">Please re-upload this document to view it in the browser.</p>
+          </div>
+        ) : (
+          <Document
+            file={pdfFile}
+            onLoadSuccess={onDocumentLoadSuccess}
+            loading={
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                <span className="animate-pulse">Rendering PDF...</span>
+              </div>
+            }
+            error={
+              <div className="flex flex-col items-center justify-center h-full text-destructive">
+                Failed to render PDF.
+              </div>
+            }
+            className="flex flex-col items-center shadow-lg"
+          >
           <Page
             pageNumber={pageNumber}
             scale={scale}
@@ -130,6 +152,7 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
             className="bg-white"
           />
         </Document>
+        )}
       </div>
     </div>
   );

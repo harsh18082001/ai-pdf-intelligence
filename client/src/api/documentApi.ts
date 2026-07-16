@@ -13,10 +13,6 @@ export const documentApi = baseApi.injectEndpoints({
       transformResponse: (response: ApiResponse<DocumentDTO>) => response.data!,
       providesTags: (_result, _error, id) => [{ type: 'Document', id }],
     }),
-    getDocumentStatus: builder.query<{ status: string; errorMsg?: string }, number>({
-      query: (id) => `/documents/${id}/status`,
-      transformResponse: (response: ApiResponse<{ status: string; errorMsg?: string }>) => response.data!,
-    }),
     uploadDocument: builder.mutation<DocumentDTO, File>({
       query: (file) => {
         const formData = new FormData();
@@ -43,7 +39,6 @@ export const documentApi = baseApi.injectEndpoints({
 export const {
   useGetDocumentsQuery,
   useGetDocumentQuery,
-  useGetDocumentStatusQuery,
   useUploadDocumentMutation,
   useDeleteDocumentMutation,
 } = documentApi;

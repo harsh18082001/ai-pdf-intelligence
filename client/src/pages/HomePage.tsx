@@ -21,7 +21,7 @@ export function HomePage() {
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
               Upload your PDFs and let AI instantly analyze, summarize, and extract the most valuable insights for you.
             </p>
-            <div className="animate-scale-in stagger-3">
+            <div className="mt-8">
               <UploadModal />
             </div>
           </div>
