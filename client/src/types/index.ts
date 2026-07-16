@@ -5,6 +5,7 @@ export interface DocumentDTO {
   fileSize: number;
   pageCount: number;
   status: string;
+  errorMsg?: string;
   createdAt: string;
   updatedAt: string;
 }

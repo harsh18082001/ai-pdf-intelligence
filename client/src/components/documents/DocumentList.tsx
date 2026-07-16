@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useAppDispatch } from '@/store/hooks';
 import { useGetDocumentsQuery, documentApi } from '@/api/documentApi';
 import { supabase } from '@/lib/supabase';
 import { DocumentCard } from './DocumentCard';
@@ -7,7 +7,7 @@ import { FileText, Loader2 } from 'lucide-react';
 import { UploadModal } from './UploadModal';
 
 export function DocumentList() {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const { data: documents = [], isLoading, error } = useGetDocumentsQuery();
 
   useEffect(() => {

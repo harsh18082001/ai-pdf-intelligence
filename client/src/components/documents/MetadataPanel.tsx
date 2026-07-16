@@ -5,9 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { FileText, Calendar, HardDrive, Hash, CheckCircle2, Loader2, AlertCircle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
-import { documentApi } from '@/api/documentApi';
-import { useAppDispatch } from '@/store/hooks';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -20,7 +18,6 @@ interface MetadataPanelProps {
 export function MetadataPanel({ documentId }: MetadataPanelProps) {
   const { data: document, isLoading } = useGetDocumentQuery(documentId);
   const [executeCommand, { isLoading: isExecuting }] = useExecuteCommandMutation();
-  const dispatch = useAppDispatch();
   
   const [activeCommand, setActiveCommand] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

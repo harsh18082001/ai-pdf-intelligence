@@ -4,7 +4,7 @@ import { useGetDocumentQuery, documentApi } from '@/api/documentApi';
 import { MetadataPanel } from '@/components/documents/MetadataPanel';
 import { Button } from '@/components/ui/button';
 import { useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useAppDispatch } from '@/store/hooks';
 import { supabase } from '@/lib/supabase';
 
 import { PDFViewer } from '@/components/documents/PDFViewer';
@@ -14,7 +14,7 @@ export function DocumentPage() {
   const { id } = useParams<{ id: string }>();
   const documentId = parseInt(id || '0', 10);
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
 
   const { data: document, isError } = useGetDocumentQuery(documentId, {
     skip: !documentId,
