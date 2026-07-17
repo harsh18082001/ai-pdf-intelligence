@@ -45,8 +45,9 @@ export class LocalProvider implements AIProvider {
     });
 
     const output = await generator(prompt, {
-      max_new_tokens: params.maxTokens || 256,
+      max_new_tokens: params.maxTokens || 512,
       temperature: params.temperature || 0.7,
+      repetition_penalty: 1.15,
       return_full_text: false,
     });
 
@@ -70,8 +71,9 @@ export class LocalProvider implements AIProvider {
     // We will generate the full text and yield it chunk by chunk as a mock stream, 
     // or use a TextStreamer if available. For simplicity and robustness in MVP, we yield words.
     const output = await generator(prompt, {
-      max_new_tokens: params.maxTokens || 256,
+      max_new_tokens: params.maxTokens || 512,
       temperature: params.temperature || 0.7,
+      repetition_penalty: 1.15,
       return_full_text: false,
     });
 
