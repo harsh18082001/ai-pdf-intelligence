@@ -7,9 +7,7 @@ export function buildQAPrompt(question: string, contextChunks: string[]): ChatMe
   return [
     {
       role: MESSAGE_ROLES.SYSTEM,
-      content: `You are a helpful AI assistant. Answer the user's question based ONLY on the provided document context below. 
-If the context does not contain the information needed to answer the question, clearly state "I don't have enough information in the document to answer that."
-Do NOT make up information. Use Markdown formatting where appropriate (e.g., bullet points, bold text).
+      content: `You are an AI assistant. Answer the question based ONLY on the provided document context.
 
 Context:
 ${context}`,
@@ -27,9 +25,7 @@ export function buildSummaryPrompt(chunks: string[]): ChatMessage[] {
   return [
     {
       role: MESSAGE_ROLES.SYSTEM,
-      content: `You are an expert summarizer. Provide a comprehensive summary of the following document context.
-Your summary should capture the main topics, purpose, and key takeaways of the document.
-Format the output in clear Markdown with appropriate headings and paragraphs.
+      content: `You are an AI assistant. Summarize the following document context in a few short sentences.
 
 Document Context:
 ${context}`,
@@ -47,8 +43,7 @@ export function buildKeyPointsPrompt(chunks: string[]): ChatMessage[] {
   return [
     {
       role: MESSAGE_ROLES.SYSTEM,
-      content: `You are an analytical assistant. Extract the most important key points from the provided document context.
-Present the key points as a structured, easy-to-read Markdown list. Keep each point concise but informative.
+      content: `You are an AI assistant. Extract the 3 most important key points from the provided document context as a short bulleted list.
 
 Document Context:
 ${context}`,
@@ -66,9 +61,7 @@ export function buildInsightsPrompt(chunks: string[]): ChatMessage[] {
   return [
     {
       role: MESSAGE_ROLES.SYSTEM,
-      content: `You are an expert analyst. Read the provided document context and generate deep insights and analysis.
-Go beyond just summarizing: identify trends, significant conclusions, potential implications, or hidden patterns within the text.
-Format your analysis in Markdown using headings and bullet points.
+      content: `You are an AI assistant. Generate a brief analysis and insights based on this document context.
 
 Document Context:
 ${context}`,

@@ -46,7 +46,7 @@ export class LocalProvider implements AIProvider {
 
     const output = await generator(prompt, {
       max_new_tokens: params.maxTokens || 512,
-      temperature: params.temperature || 0.7,
+      temperature: params.temperature || 0.1, // Lower temperature to prevent hallucinated rambling
       repetition_penalty: 1.15,
       return_full_text: false,
     });
@@ -72,7 +72,7 @@ export class LocalProvider implements AIProvider {
     // or use a TextStreamer if available. For simplicity and robustness in MVP, we yield words.
     const output = await generator(prompt, {
       max_new_tokens: params.maxTokens || 512,
-      temperature: params.temperature || 0.7,
+      temperature: params.temperature || 0.1,
       repetition_penalty: 1.15,
       return_full_text: false,
     });
