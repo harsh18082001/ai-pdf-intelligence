@@ -12,7 +12,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DATABASE_URL: z.string().url().or(z.string().startsWith('file:')),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
-  LOCAL_CHAT_MODEL: z.string().default('Xenova/TinyLlama-1.1B-Chat-v1.0'),
+  LOCAL_CHAT_MODEL: z.string().default('Xenova/Qwen1.5-0.5B-Chat'),
   LOCAL_EMBEDDING_MODEL: z.string().default('Xenova/all-MiniLM-L6-v2'),
   MAX_FILE_SIZE_MB: z.coerce.number().default(50),
   UPLOAD_DIR: z.string().default('./uploads'),
