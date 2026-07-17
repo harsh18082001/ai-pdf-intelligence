@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useGetChatHistoryQuery } from '@/api/chatApi';
 import { useAppDispatch } from '@/store/hooks';
 import { chatApi } from '@/api/chatApi';
@@ -22,6 +22,11 @@ export function useChat(documentId: number) {
 
   // Combine DB history with any temporary streamed messages
   const allMessages = [...history, ...messages];
+
+  // When the server history updates, clear the temporary messages to prevent flickering
+  useEffect(() => {
+    setMessages([]);
+  }, [history]);
 
   const sendMessage = useCallback(
     (content: string) => {
@@ -49,9 +54,9 @@ export function useChat(documentId: number) {
         if (data === '[DONE]') {
           eventSource.close();
           setIsStreaming(false);
-          // Refresh the history from the server to get the persisted messages
+          // Refresh the history from the server.
+          // Temporary messages will be cleared automatically by the useEffect when history updates.
           dispatch(chatApi.util.invalidateTags([{ type: 'Message', id: documentId }]));
-          setMessages([]); // Clear temporary messages
           return;
         }
 
