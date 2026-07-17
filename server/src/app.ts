@@ -7,6 +7,9 @@ import { generalLimiter } from './middlewares/rate-limiter.js';
 
 const app = express();
 
+// Trust Vercel's reverse proxy for accurate client IP in rate limiting
+app.set('trust proxy', 1);
+
 app.use(
   cors({
     origin: env.CORS_ORIGIN,
