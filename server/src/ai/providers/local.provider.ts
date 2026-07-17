@@ -38,9 +38,11 @@ export class LocalProvider implements AIProvider {
       content: m.content
     }));
 
-    // Some smaller models don't support system prompts natively.
-    // We'll format manually if they don't have chat_template
-    const prompt = chatMessages.map(m => `${m.role}: ${m.content}`).join('\n') + '\nassistant:';
+    // Use the model's official chat template to prevent hallucination loops
+    const prompt = generator.tokenizer.apply_chat_template(chatMessages, {
+      tokenize: false,
+      add_generation_prompt: true,
+    });
 
     const output = await generator(prompt, {
       max_new_tokens: params.maxTokens || 256,
@@ -59,7 +61,10 @@ export class LocalProvider implements AIProvider {
       content: m.content
     }));
 
-    const prompt = chatMessages.map(m => `${m.role}: ${m.content}`).join('\n') + '\nassistant:';
+    const prompt = generator.tokenizer.apply_chat_template(chatMessages, {
+      tokenize: false,
+      add_generation_prompt: true,
+    });
 
     // Xenova/transformers doesn't support async generator streaming in JS out of the box in the same way as APIs.
     // We will generate the full text and yield it chunk by chunk as a mock stream, 
