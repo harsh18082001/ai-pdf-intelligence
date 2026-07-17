@@ -18,7 +18,7 @@
     "test:integration": "jest --config jest.config.ts --testPathPattern=tests/integration"
   },
   "dependencies": {
-    "@huggingface/inference": "^3.13.2",
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.9.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -35,18 +35,18 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.2",
+    "@types/jest": "^29.5.14",
     "@types/multer": "^1.4.12",
     "@types/node": "^22.15.0",
+    "@types/supertest": "^6.0.3",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.32.0",
     "@typescript-eslint/parser": "^8.32.0",
     "eslint": "^9.27.0",
     "jest": "^29.7.0",
-    "@types/jest": "^29.5.14",
-    "ts-jest": "^29.3.4",
-    "supertest": "^7.1.0",
-    "@types/supertest": "^6.0.3",
     "prisma": "^6.9.0",
+    "supertest": "^7.1.0",
+    "ts-jest": "^29.3.4",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }

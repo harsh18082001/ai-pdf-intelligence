@@ -8,20 +8,20 @@ class AIService implements AIProvider {
 
   constructor() {
     this.provider = createAIProvider({
-      provider: 'huggingface',
-      apiToken: env.HF_API_TOKEN,
-      chatModel: env.HF_CHAT_MODEL,
-      embeddingModel: env.HF_EMBEDDING_MODEL,
+      provider: 'gemini',
+      apiToken: env.GEMINI_API_KEY,
+      chatModel: env.GEMINI_CHAT_MODEL,
+      embeddingModel: env.GEMINI_EMBEDDING_MODEL,
     });
   }
 
   async chatCompletion(params: ChatCompletionParams): Promise<string> {
-    logger.info({ model: env.HF_CHAT_MODEL }, 'Calling chatCompletion');
+    logger.info({ model: env.GEMINI_CHAT_MODEL }, 'Calling chatCompletion');
     return this.withRetry(() => this.provider.chatCompletion(params));
   }
 
   async *chatCompletionStream(params: ChatCompletionParams): AsyncIterable<string> {
-    logger.info({ model: env.HF_CHAT_MODEL }, 'Calling chatCompletionStream');
+    logger.info({ model: env.GEMINI_CHAT_MODEL }, 'Calling chatCompletionStream');
     // For streams, retrying the whole stream isn't straightforward in an async generator.
     // Assuming the initial connection failure is caught, but mid-stream failures would break.
     // For MVP, we pass it through directly.
@@ -29,13 +29,13 @@ class AIService implements AIProvider {
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
-    logger.info({ model: env.HF_EMBEDDING_MODEL, length: text.length }, 'Calling generateEmbedding');
+    logger.info({ model: env.GEMINI_EMBEDDING_MODEL, length: text.length }, 'Calling generateEmbedding');
     return this.withRetry(() => this.provider.generateEmbedding(text));
   }
 
   async generateEmbeddings(texts: string[]): Promise<number[][]> {
     logger.info(
-      { model: env.HF_EMBEDDING_MODEL, count: texts.length },
+      { model: env.GEMINI_EMBEDDING_MODEL, count: texts.length },
       'Calling generateEmbeddings'
     );
     return this.withRetry(() => this.provider.generateEmbeddings(texts));
