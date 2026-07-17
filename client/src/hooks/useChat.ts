@@ -40,7 +40,8 @@ export function useChat(documentId: number) {
       setIsStreaming(true);
 
       const encodedMessage = encodeURIComponent(content);
-      const eventSource = new EventSource(`/api/documents/${documentId}/chat/stream?message=${encodedMessage}`);
+      const baseUrl = import.meta.env.VITE_API_URL || '/api';
+      const eventSource = new EventSource(`${baseUrl}/documents/${documentId}/chat/stream?message=${encodedMessage}`);
 
       eventSource.onmessage = (event) => {
         const data = event.data;
