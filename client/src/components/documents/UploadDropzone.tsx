@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { UploadCloud, File as FileIcon, X } from 'lucide-react';
+import { UploadCloud, File as FileIcon, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -68,7 +68,14 @@ export function UploadDropzone({ onFileSelect, isLoading }: UploadDropzoneProps)
           </Button>
         </div>
         <Button onClick={handleUpload} disabled={isLoading} className="w-full">
-          {isLoading ? 'Uploading...' : 'Process Document'}
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            'Process Document'
+          )}
         </Button>
       </div>
     );

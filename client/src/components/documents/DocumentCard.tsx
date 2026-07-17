@@ -87,7 +87,11 @@ export function DocumentCard({ document }: DocumentCardProps) {
             onClick={handleDelete}
             disabled={isDeleting}
           >
-            <Trash2 className="h-4 w-4" />
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin text-destructive" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
           </Button>
         </CardFooter>
       </Card>
