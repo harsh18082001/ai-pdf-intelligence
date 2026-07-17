@@ -46,12 +46,14 @@ export class LocalProvider implements AIProvider {
 
     const output = await generator(prompt, {
       max_new_tokens: params.maxTokens || 512,
-      temperature: params.temperature || 0.1, // Lower temperature to prevent hallucinated rambling
-      repetition_penalty: 1.15,
+      temperature: params.temperature || 0.1,
       return_full_text: false,
     });
 
-    return output[0].generated_text.trim();
+    let text = output[0].generated_text.trim();
+    // Manually strip ChatML stop tokens if transformers.js leaked them
+    text = text.replace(/<\|im_end\|>/g, '').replace(/<\|endoftext\|>/g, '').trim();
+    return text;
   }
 
   async *chatCompletionStream(params: ChatCompletionParams): AsyncIterable<string> {
@@ -73,11 +75,12 @@ export class LocalProvider implements AIProvider {
     const output = await generator(prompt, {
       max_new_tokens: params.maxTokens || 512,
       temperature: params.temperature || 0.1,
-      repetition_penalty: 1.15,
       return_full_text: false,
     });
 
-    const text = output[0].generated_text.trim();
+    let text = output[0].generated_text.trim();
+    text = text.replace(/<\|im_end\|>/g, '').replace(/<\|endoftext\|>/g, '').trim();
+    
     const words = text.split(' ');
     for (let i = 0; i < words.length; i++) {
       yield words[i] + (i < words.length - 1 ? ' ' : '');
