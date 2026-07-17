@@ -8,9 +8,7 @@ import { UploadModal } from './UploadModal';
 
 export function DocumentList() {
   const dispatch = useAppDispatch();
-  const { data: documents = [], isLoading, error } = useGetDocumentsQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-  });
+  const { data: documents = [], isLoading, error } = useGetDocumentsQuery();
 
   useEffect(() => {
     if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {

@@ -30,10 +30,12 @@ class DocumentService {
       fileSize: file.size,
     });
 
-    // Start background processing
-    processDocumentAsync(doc.id, file.data);
+    // Wait for processing to complete synchronously so Vercel Serverless doesn't kill it
+    await processDocumentAsync(doc.id, file.data);
 
-    return toDTO(doc);
+    // Fetch the updated document with its new status
+    const updatedDoc = await documentRepository.findById(doc.id);
+    return toDTO(updatedDoc || doc);
   }
 
   async list(): Promise<DocumentDTO[]> {

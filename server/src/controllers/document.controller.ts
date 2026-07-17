@@ -22,6 +22,7 @@ export const uploadDocument = async (req: Request, res: Response<ApiResponse<Doc
 export const listDocuments = async (_req: Request, res: Response<ApiResponse<DocumentDTO[]>>) => {
   const documents = await documentService.list();
 
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.status(200).json({
     success: true,
     data: documents,
@@ -34,6 +35,7 @@ export const getDocument = async (req: Request, res: Response<ApiResponse<Docume
 
   const document = await documentService.getById(id);
 
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.status(200).json({
     success: true,
     data: document,
