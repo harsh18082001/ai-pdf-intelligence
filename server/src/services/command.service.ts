@@ -34,8 +34,9 @@ class CommandService {
       }
     }
 
-    // 2. Fetch all chunks
-    const chunks = await chunkRepository.findByDocumentId(documentId);
+    // 2. Fetch limited chunks (to avoid overflowing small local models like TinyLlama)
+    const allChunks = await chunkRepository.findByDocumentId(documentId);
+    const chunks = allChunks.slice(0, 2); // Max ~1024 tokens
     if (chunks.length === 0) {
       throw new AppError('No document content available', 400);
     }
