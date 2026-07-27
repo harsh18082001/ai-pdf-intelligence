@@ -15,6 +15,17 @@ interface PDFViewerProps {
   documentId: number;
 }
 
+// Helper to check if a Blob is actually a valid PDF file (starts with %PDF-)
+async function isValidPdfBlob(blob: Blob): Promise<boolean> {
+  try {
+    const headerBuffer = await blob.slice(0, 5).arrayBuffer();
+    const headerText = new TextDecoder().decode(headerBuffer);
+    return headerText === '%PDF-';
+  } catch {
+    return false;
+  }
+}
+
 export function PDFViewer({ documentId }: PDFViewerProps) {
   const { data: documentData } = useGetDocumentQuery(documentId, { skip: !documentId });
   const [numPages, setNumPages] = useState<number>(0);
@@ -22,7 +33,7 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
   const [scale, setScale] = useState<number>(1.0);
   const [pageInput, setPageInput] = useState<string>('1');
   const [isMaximized, setIsMaximized] = useState(false);
-  const [pdfSource, setPdfSource] = useState<string | Blob | null>(null);
+  const [pdfSource, setPdfSource] = useState<Blob | null>(null);
   const [loadingPdf, setLoadingPdf] = useState(true);
 
   useEffect(() => {
@@ -31,7 +42,7 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
     const fetchPDFSource = async () => {
       setLoadingPdf(true);
 
-      // Priority 1: Fetch via backend proxy /api/documents/:id/file (bypasses B2 CORS and presigned URL issues)
+      // Priority 1: Fetch via backend stream proxy /api/documents/:id/file
       try {
         const token = localStorage.getItem('dociq_google_token');
         const headers: Record<string, string> = {
@@ -43,30 +54,53 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
 
         const res = await fetch(`/api/documents/${documentId}/file`, { headers });
         if (res.ok) {
-          const blob = await res.blob();
-          if (isMounted) {
-            setPdfSource(blob);
-            setLoadingPdf(false);
-            return;
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/pdf')) {
+            const blob = await res.blob();
+            if (await isValidPdfBlob(blob)) {
+              if (isMounted) {
+                setPdfSource(blob);
+                setLoadingPdf(false);
+                return;
+              }
+            }
           }
         }
       } catch {
-        // Ignore fetch error and proceed to fallback
+        // Fallback to next source on fetch failure
       }
 
-      // Priority 2: Use direct Backblaze B2 Presigned URL if provided
+      // Priority 2: Fetch direct Backblaze B2 Presigned URL if available
       if (documentData?.fileUrl) {
-        if (isMounted) {
-          setPdfSource(documentData.fileUrl);
-          setLoadingPdf(false);
-          return;
+        try {
+          const b2Res = await fetch(documentData.fileUrl);
+          if (b2Res.ok) {
+            const blob = await b2Res.blob();
+            if (await isValidPdfBlob(blob)) {
+              if (isMounted) {
+                setPdfSource(blob);
+                setLoadingPdf(false);
+                return;
+              }
+            }
+          }
+        } catch {
+          // Fallback to IndexedDB
         }
       }
 
       // Priority 3: Fallback to local IndexedDB cache
       const localBlob = await loadPDF(documentId);
+      if (localBlob && (await isValidPdfBlob(localBlob))) {
+        if (isMounted) {
+          setPdfSource(localBlob);
+          setLoadingPdf(false);
+          return;
+        }
+      }
+
       if (isMounted) {
-        setPdfSource(localBlob || null);
+        setPdfSource(null);
         setLoadingPdf(false);
       }
     };
