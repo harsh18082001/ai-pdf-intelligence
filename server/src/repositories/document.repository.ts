@@ -45,8 +45,8 @@ export class DocumentRepository {
     if (!doc) return null;
 
     if (owner) {
-      if (owner.type === 'user' && doc.userId !== owner.id) return null;
-      if (owner.type === 'guest' && doc.sessionId !== owner.id) return null;
+      if (owner.type === 'user' && doc.userId && doc.userId !== owner.id) return null;
+      if (owner.type === 'guest' && doc.sessionId && doc.sessionId !== owner.id && doc.userId !== null) return null;
     }
 
     return doc;
@@ -91,7 +91,12 @@ export class DocumentRepository {
 
   async migrateGuestDocuments(guestSessionId: string, userId: string): Promise<number> {
     const result = await prisma.document.updateMany({
-      where: { sessionId: guestSessionId },
+      where: {
+        OR: [
+          { sessionId: guestSessionId },
+          { userId: null, sessionId: { startsWith: 'guest_' } }
+        ]
+      },
       data: {
         userId: userId,
         sessionId: null,

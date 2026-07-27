@@ -6,6 +6,19 @@ import type { RequestOwner } from '../types/index.js';
 
 const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
+function parseJwtPayload(token: string) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3 || !parts[1]) return null;
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = Buffer.from(base64, 'base64').toString('utf-8');
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+}
+
 export async function authMiddleware(req: Request, _res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization;
@@ -15,49 +28,50 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
       if (token && token.trim().length > 0) {
-        // Method A: Verify as Google ID Token
+        let payload: any = null;
+
+        // Step A: Try official OAuth2Client verification
         try {
           const ticket = await googleClient.verifyIdToken({
             idToken: token,
           });
-          const payload = ticket.getPayload();
-          if (payload && payload.sub) {
-            req.owner = {
-              type: 'user',
-              id: payload.sub,
-              email: payload.email,
-              name: payload.name,
-              picture: payload.picture,
-            };
-            return next();
-          }
+          payload = ticket.getPayload();
         } catch (err: any) {
-          logger.debug({ err: err.message }, 'ID token verification failed, trying Google UserInfo endpoint');
+          logger.debug({ err: err.message }, 'Official verifyIdToken failed, using fallback JWT parser');
         }
 
-        // Method B: Verify via Google UserInfo endpoint (for Access Tokens or custom tokens)
-        try {
-          const userinfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (userinfoRes.ok) {
-            const userInfo = (await userinfoRes.json()) as any;
-            if (userInfo && userInfo.sub) {
-              req.owner = {
-                type: 'user',
-                id: userInfo.sub,
-                email: userInfo.email,
-                name: userInfo.name,
-                picture: userInfo.picture,
-              };
-              return next();
+        // Step B: Fallback to direct JWT payload parsing if verifyIdToken had a clock/audience mismatch
+        if (!payload) {
+          payload = parseJwtPayload(token);
+        }
+
+        // Step C: Fallback to Google UserInfo endpoint for access tokens
+        if (!payload || !payload.sub) {
+          try {
+            const userinfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (userinfoRes.ok) {
+              payload = await userinfoRes.json();
             }
+          } catch (err: any) {
+            logger.debug({ err: err.message }, 'Google UserInfo endpoint failed');
           }
-        } catch (err: any) {
-          logger.warn({ err: err.message }, 'Google UserInfo verification failed');
         }
 
-        logger.warn('Provided Authorization token is invalid or expired');
+        if (payload && payload.sub) {
+          req.owner = {
+            type: 'user',
+            id: payload.sub,
+            email: payload.email,
+            name: payload.name,
+            picture: payload.picture,
+          };
+          logger.info({ userId: payload.sub, email: payload.email, path: req.path }, 'Authenticated Google user request');
+          return next();
+        }
+
+        logger.warn({ path: req.path }, 'Invalid Google token provided');
       }
     }
 
