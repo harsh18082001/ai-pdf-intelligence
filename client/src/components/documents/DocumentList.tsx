@@ -11,7 +11,7 @@ export function DocumentList() {
   const { data: documents = [], isLoading, error } = useGetDocumentsQuery();
 
   useEffect(() => {
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    if (!supabase || !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
       return;
     }
 

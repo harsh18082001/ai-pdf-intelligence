@@ -21,7 +21,7 @@ export function DocumentPage() {
   });
 
   useEffect(() => {
-    if (!documentId || !import.meta.env.VITE_SUPABASE_URL) return;
+    if (!documentId || !supabase || !import.meta.env.VITE_SUPABASE_URL) return;
 
     const channel = supabase
       .channel(`document-${documentId}-updates`)
