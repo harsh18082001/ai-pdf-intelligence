@@ -3,11 +3,11 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useGetDocumentQuery } from '@/api/documentApi';
 import { loadPDF } from '@/services/pdfStorage';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-// Configure the worker for react-pdf
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PDFViewerProps {
@@ -15,23 +15,38 @@ interface PDFViewerProps {
 }
 
 export function PDFViewer({ documentId }: PDFViewerProps) {
+  const { data: documentData } = useGetDocumentQuery(documentId, { skip: !documentId });
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [pageInput, setPageInput] = useState<string>('1');
   const [isMaximized, setIsMaximized] = useState(false);
-  const [pdfFile, setPdfFile] = useState<Blob | null>(null);
-  const [loadingLocal, setLoadingLocal] = useState(true);
+  const [pdfSource, setPdfSource] = useState<string | Blob | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(true);
 
   useEffect(() => {
-    const fetchLocalPDF = async () => {
-      setLoadingLocal(true);
-      const file = await loadPDF(documentId);
-      setPdfFile(file);
-      setLoadingLocal(false);
+    const fetchPDFSource = async () => {
+      setLoadingPdf(true);
+
+      // 1. First priority: Use Backblaze B2 Presigned URL from server DTO
+      if (documentData?.fileUrl) {
+        setPdfSource(documentData.fileUrl);
+        setLoadingPdf(false);
+        return;
+      }
+
+      // 2. Fallback: Load from local IndexedDB cache if present
+      const localBlob = await loadPDF(documentId);
+      if (localBlob) {
+        setPdfSource(localBlob);
+      } else {
+        setPdfSource(null);
+      }
+      setLoadingPdf(false);
     };
-    fetchLocalPDF();
-  }, [documentId]);
+
+    fetchPDFSource();
+  }, [documentId, documentData]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
@@ -68,7 +83,7 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
       if (!isNaN(parsed) && parsed >= 1 && parsed <= numPages) {
         setPageNumber(parsed);
       } else {
-        setPageInput(String(pageNumber)); // Revert if invalid
+        setPageInput(String(pageNumber));
       }
     }
   };
@@ -119,18 +134,17 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
 
       {/* PDF Document Container */}
       <div className="flex-1 overflow-auto bg-muted/20 relative flex justify-center p-4">
-        {loadingLocal ? (
+        {loadingPdf ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <span className="animate-pulse">Loading local PDF...</span>
+            <span className="animate-pulse">Loading PDF from Backblaze B2...</span>
           </div>
-        ) : !pdfFile ? (
+        ) : !pdfSource ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <p>PDF not available locally.</p>
-            <p className="text-sm">Please re-upload this document to view it in the browser.</p>
+            <p>PDF file not available.</p>
           </div>
         ) : (
           <Document
-            file={pdfFile}
+            file={pdfSource}
             onLoadSuccess={onDocumentLoadSuccess}
             loading={
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -144,14 +158,14 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
             }
             className="flex flex-col items-center shadow-lg"
           >
-          <Page
-            pageNumber={pageNumber}
-            scale={scale}
-            renderTextLayer={true}
-            renderAnnotationLayer={true}
-            className="bg-white"
-          />
-        </Document>
+            <Page
+              pageNumber={pageNumber}
+              scale={scale}
+              renderTextLayer={true}
+              renderAnnotationLayer={true}
+              className="bg-white"
+            />
+          </Document>
         )}
       </div>
     </div>
