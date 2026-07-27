@@ -32,7 +32,8 @@ class B2StorageService {
 
   async uploadPdf(fileBuffer: Buffer, originalFileName: string): Promise<{ storageKey: string }> {
     const fileExtension = originalFileName.endsWith('.pdf') ? '' : '.pdf';
-    const storageKey = `documents/${uuidv4()}_${originalFileName}${fileExtension}`;
+    const cleanFileName = originalFileName.toLowerCase().startsWith('dociq_') ? originalFileName : `dociq_${originalFileName}`;
+    const storageKey = `documents/${uuidv4()}_${cleanFileName}${fileExtension}`;
 
     if (!this.s3Client) {
       logger.warn({ storageKey }, 'B2 client not initialized, returning mock storageKey');

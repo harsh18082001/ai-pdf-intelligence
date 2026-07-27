@@ -31,13 +31,15 @@ async function toDTO(doc: Document): Promise<DocumentDTO> {
 
 class DocumentService {
   async upload(file: UploadedFile, owner?: RequestOwner): Promise<DocumentDTO> {
+    const formattedName = file.name.toLowerCase().startsWith('dociq_') ? file.name : `dociq_${file.name}`;
+
     // 1. Upload to Backblaze B2
-    const { storageKey } = await b2StorageService.uploadPdf(file.data, file.name);
+    const { storageKey } = await b2StorageService.uploadPdf(file.data, formattedName);
 
     // 2. Create document record in database
     const doc = await documentRepository.create({
-      title: file.name,
-      fileName: file.name,
+      title: formattedName,
+      fileName: formattedName,
       fileSize: file.size,
       storageKey,
       owner,
