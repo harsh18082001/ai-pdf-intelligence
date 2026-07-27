@@ -6,6 +6,7 @@ import {
   listDocuments,
   getDocument,
   downloadDocument,
+  proxyPdfFile,
   deleteDocument,
 } from '../controllers/document.controller.js';
 
@@ -15,6 +16,7 @@ router.post('/', uploadPdf, asyncHandler(uploadDocument));
 router.get('/', asyncHandler(listDocuments));
 router.get('/:id', asyncHandler(getDocument));
 router.get('/:id/download', asyncHandler(downloadDocument));
+router.get('/:id/file', asyncHandler(proxyPdfFile));
 router.delete('/:id', asyncHandler(deleteDocument));
 
 export default router;

@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
-function getGuestSessionId(): string {
+export function getGuestSessionId(): string {
   let id = localStorage.getItem('dociq_guest_session_id');
   if (!id) {
     id = 'guest_' + crypto.randomUUID();

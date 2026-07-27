@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGetDocumentQuery } from '@/api/documentApi';
 import { loadPDF } from '@/services/pdfStorage';
+import { getGuestSessionId } from '@/api/baseApi';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -25,27 +26,58 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
   const [loadingPdf, setLoadingPdf] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchPDFSource = async () => {
       setLoadingPdf(true);
 
-      // 1. First priority: Use Backblaze B2 Presigned URL from server DTO
-      if (documentData?.fileUrl) {
-        setPdfSource(documentData.fileUrl);
-        setLoadingPdf(false);
-        return;
+      // Priority 1: Fetch via backend proxy /api/documents/:id/file (bypasses B2 CORS and presigned URL issues)
+      try {
+        const token = localStorage.getItem('dociq_google_token');
+        const headers: Record<string, string> = {
+          'x-session-id': getGuestSessionId(),
+        };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const res = await fetch(`/api/documents/${documentId}/file`, { headers });
+        if (res.ok) {
+          const blob = await res.blob();
+          if (isMounted) {
+            setPdfSource(blob);
+            setLoadingPdf(false);
+            return;
+          }
+        }
+      } catch {
+        // Ignore fetch error and proceed to fallback
       }
 
-      // 2. Fallback: Load from local IndexedDB cache if present
-      const localBlob = await loadPDF(documentId);
-      if (localBlob) {
-        setPdfSource(localBlob);
-      } else {
-        setPdfSource(null);
+      // Priority 2: Use direct Backblaze B2 Presigned URL if provided
+      if (documentData?.fileUrl) {
+        if (isMounted) {
+          setPdfSource(documentData.fileUrl);
+          setLoadingPdf(false);
+          return;
+        }
       }
-      setLoadingPdf(false);
+
+      // Priority 3: Fallback to local IndexedDB cache
+      const localBlob = await loadPDF(documentId);
+      if (isMounted) {
+        setPdfSource(localBlob || null);
+        setLoadingPdf(false);
+      }
     };
 
-    fetchPDFSource();
+    if (documentId) {
+      fetchPDFSource();
+    }
+
+    return () => {
+      isMounted = false;
+    };
   }, [documentId, documentData]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
@@ -136,11 +168,12 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
       <div className="flex-1 overflow-auto bg-muted/20 relative flex justify-center p-4">
         {loadingPdf ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <span className="animate-pulse">Loading PDF from Backblaze B2...</span>
+            <span className="animate-pulse">Loading PDF from cloud storage...</span>
           </div>
         ) : !pdfSource ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
             <p>PDF file not available.</p>
+            <p className="text-xs text-muted-foreground mt-1">Please re-upload this document.</p>
           </div>
         ) : (
           <Document

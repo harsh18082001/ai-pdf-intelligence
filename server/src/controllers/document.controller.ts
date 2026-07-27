@@ -3,6 +3,8 @@ import type { UploadedFile } from 'express-fileupload';
 import { documentService } from '../services/document.service.js';
 import { AppError } from '../middlewares/error-handler.js';
 import type { ApiResponse, DocumentDTO } from '../types/index.js';
+import { documentRepository } from '../repositories/document.repository.js';
+import { b2StorageService } from '../services/b2-storage.service.js';
 
 export const uploadDocument = async (req: Request, res: Response<ApiResponse<DocumentDTO>>) => {
   if (!req.files || !req.files.file) {
@@ -51,6 +53,25 @@ export const downloadDocument = async (req: Request, res: Response<ApiResponse<{
     success: true,
     data: result,
   });
+};
+
+export const proxyPdfFile = async (req: Request, res: Response) => {
+  const id = parseInt((req.params.id as string) || '0', 10);
+  if (isNaN(id)) throw new AppError('Invalid document ID', 400);
+
+  const doc = await documentRepository.findById(id, req.owner);
+  if (!doc || !doc.storageKey) throw new AppError('Document file not found', 404);
+
+  const buffer = await b2StorageService.getPdfBuffer(doc.storageKey);
+  if (!buffer) throw new AppError('Failed to fetch PDF content from cloud storage', 500);
+
+  res.set({
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': `inline; filename="${doc.fileName}"`,
+    'Content-Length': buffer.length.toString(),
+    'Cache-Control': 'public, max-age=3600',
+  });
+  res.send(buffer);
 };
 
 export const deleteDocument = async (req: Request, res: Response<ApiResponse>) => {
