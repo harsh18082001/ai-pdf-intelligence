@@ -19,6 +19,15 @@ const envSchema = z.object({
   PINECONE_INDEX_HOST: z.string().url('Pinecone index host is required'),
   LOG_LEVEL: z.string().default('info'),
   MAX_FILE_SIZE_MB: z.coerce.number().default(50),
+  // Backblaze B2 Storage
+  B2_KEY_ID: z.string().optional(),
+  B2_APPLICATION_KEY: z.string().optional(),
+  B2_BUCKET_NAME: z.string().optional(),
+  B2_ENDPOINT: z.string().optional(),
+  B2_REGION: z.string().optional(),
+  // Google OAuth
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
 });
 
 const _env = envSchema.safeParse(process.env);

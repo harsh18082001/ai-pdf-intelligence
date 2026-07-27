@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import type { UploadedFile } from 'express-fileupload';
 import { documentService } from '../services/document.service.js';
 import { AppError } from '../middlewares/error-handler.js';
@@ -10,8 +10,7 @@ export const uploadDocument = async (req: Request, res: Response<ApiResponse<Doc
   }
 
   const file = req.files.file as UploadedFile;
-  console.log('UPLOADED FILE:', file);
-  const document = await documentService.upload(file);
+  const document = await documentService.upload(file, req.owner);
 
   res.status(201).json({
     success: true,
@@ -19,8 +18,8 @@ export const uploadDocument = async (req: Request, res: Response<ApiResponse<Doc
   });
 };
 
-export const listDocuments = async (_req: Request, res: Response<ApiResponse<DocumentDTO[]>>) => {
-  const documents = await documentService.list();
+export const listDocuments = async (req: Request, res: Response<ApiResponse<DocumentDTO[]>>) => {
+  const documents = await documentService.list(req.owner);
 
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.status(200).json({
@@ -33,7 +32,7 @@ export const getDocument = async (req: Request, res: Response<ApiResponse<Docume
   const id = parseInt((req.params.id as string) || '0', 10);
   if (isNaN(id)) throw new AppError('Invalid document ID', 400);
 
-  const document = await documentService.getById(id);
+  const document = await documentService.getById(id, req.owner);
 
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.status(200).json({
@@ -42,11 +41,23 @@ export const getDocument = async (req: Request, res: Response<ApiResponse<Docume
   });
 };
 
+export const downloadDocument = async (req: Request, res: Response<ApiResponse<{ url: string; fileName: string }>>) => {
+  const id = parseInt((req.params.id as string) || '0', 10);
+  if (isNaN(id)) throw new AppError('Invalid document ID', 400);
+
+  const result = await documentService.getDownloadUrl(id, req.owner);
+
+  res.status(200).json({
+    success: true,
+    data: result,
+  });
+};
+
 export const deleteDocument = async (req: Request, res: Response<ApiResponse>) => {
   const id = parseInt((req.params.id as string) || '0', 10);
   if (isNaN(id)) throw new AppError('Invalid document ID', 400);
 
-  await documentService.delete(id);
+  await documentService.delete(id, req.owner);
 
   res.status(204).send();
 };
