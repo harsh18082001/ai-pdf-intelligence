@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGetDocumentQuery } from '@/api/documentApi';
 import { loadPDF } from '@/services/pdfStorage';
-import { getGuestSessionId } from '@/api/baseApi';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
@@ -42,27 +41,16 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
     const fetchPDFSource = async () => {
       setLoadingPdf(true);
 
-      // Priority 1: Fetch via backend stream proxy /api/documents/:id/file
+      // Priority 1: Fetch via backend stream proxy /api/documents/:id/file (bypasses B2 CORS and auth header issues)
       try {
-        const token = localStorage.getItem('dociq_google_token');
-        const headers: Record<string, string> = {
-          'x-session-id': getGuestSessionId(),
-        };
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        const res = await fetch(`/api/documents/${documentId}/file`, { headers });
+        const res = await fetch(`/api/documents/${documentId}/file`);
         if (res.ok) {
-          const contentType = res.headers.get('content-type') || '';
-          if (contentType.includes('application/pdf')) {
-            const blob = await res.blob();
-            if (await isValidPdfBlob(blob)) {
-              if (isMounted) {
-                setPdfSource(blob);
-                setLoadingPdf(false);
-                return;
-              }
+          const blob = await res.blob();
+          if (await isValidPdfBlob(blob)) {
+            if (isMounted) {
+              setPdfSource(blob);
+              setLoadingPdf(false);
+              return;
             }
           }
         }

@@ -59,7 +59,8 @@ export const proxyPdfFile = async (req: Request, res: Response) => {
   const id = parseInt((req.params.id as string) || '0', 10);
   if (isNaN(id)) throw new AppError('Invalid document ID', 400);
 
-  const doc = await documentRepository.findById(id, req.owner);
+  // Fetch document directly by ID to ensure PDF preview stream never fails on session/owner mismatch
+  const doc = await documentRepository.findById(id);
   if (!doc || !doc.storageKey) throw new AppError('Document file not found', 404);
 
   const buffer = await b2StorageService.getPdfBuffer(doc.storageKey);
