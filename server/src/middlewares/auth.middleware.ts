@@ -1,7 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { OAuth2Client } from 'google-auth-library';
 import { env } from '../config/env.js';
-import { AppError } from './error-handler.js';
 import { logger } from '../utils/logger.js';
 import type { RequestOwner } from '../types/index.js';
 
@@ -15,11 +14,11 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
     // 1. Try Google OAuth Bearer Token
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
-      if (token && env.GOOGLE_CLIENT_ID) {
+      if (token && token.trim().length > 0) {
+        // Method A: Verify as Google ID Token
         try {
           const ticket = await googleClient.verifyIdToken({
             idToken: token,
-            audience: env.GOOGLE_CLIENT_ID,
           });
           const payload = ticket.getPayload();
           if (payload && payload.sub) {
@@ -33,8 +32,32 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
             return next();
           }
         } catch (err: any) {
-          logger.warn({ err: err.message }, 'Failed to verify Google ID token, falling back to guest session if present');
+          logger.debug({ err: err.message }, 'ID token verification failed, trying Google UserInfo endpoint');
         }
+
+        // Method B: Verify via Google UserInfo endpoint (for Access Tokens or custom tokens)
+        try {
+          const userinfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (userinfoRes.ok) {
+            const userInfo = (await userinfoRes.json()) as any;
+            if (userInfo && userInfo.sub) {
+              req.owner = {
+                type: 'user',
+                id: userInfo.sub,
+                email: userInfo.email,
+                name: userInfo.name,
+                picture: userInfo.picture,
+              };
+              return next();
+            }
+          }
+        } catch (err: any) {
+          logger.warn({ err: err.message }, 'Google UserInfo verification failed');
+        }
+
+        logger.warn('Provided Authorization token is invalid or expired');
       }
     }
 

@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { store } from '@/store/store';
+import { documentApi } from '@/api/documentApi';
 
 export interface UserProfile {
   sub: string;
@@ -80,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setUser(newUserProfile);
 
-    // Automatically migrate guest documents to this Google account
+    // 1. Automatically migrate guest documents to this Google account
     const currentGuestId = localStorage.getItem('dociq_guest_session_id');
     if (currentGuestId) {
       try {
@@ -93,15 +95,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           },
           body: JSON.stringify({ guestSessionId: currentGuestId }),
         });
+
+        // Generate a new clean guest session ID for future guest usage
+        const newGuestId = 'guest_' + crypto.randomUUID();
+        localStorage.setItem('dociq_guest_session_id', newGuestId);
+        setGuestSessionId(newGuestId);
       } catch (err) {
         console.error('Failed to migrate guest documents:', err);
       }
     }
+
+    // 2. Reset RTK Query API state to refetch all documents under the new Google account
+    store.dispatch(documentApi.util.resetApiState());
   };
 
   const logout = () => {
     localStorage.removeItem('dociq_google_token');
     setUser(null);
+    store.dispatch(documentApi.util.resetApiState());
     window.location.reload();
   };
 
