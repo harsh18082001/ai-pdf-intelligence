@@ -5,8 +5,19 @@ import { AppError } from '../middlewares/error-handler.js';
 import type { ApiResponse, DocumentDTO } from '../types/index.js';
 
 function getClientId(req: Request): string | undefined {
-  const id = req.headers['x-client-id'];
-  return typeof id === 'string' && id.trim().length > 0 ? id.trim() : undefined;
+  const headerId = req.headers['x-client-id'];
+  if (typeof headerId === 'string' && headerId.trim().length > 0) {
+    return headerId.trim();
+  }
+  const queryId = req.query.clientId;
+  if (typeof queryId === 'string' && queryId.trim().length > 0) {
+    return queryId.trim();
+  }
+  const bodyId = req.body?.clientId;
+  if (typeof bodyId === 'string' && bodyId.trim().length > 0) {
+    return bodyId.trim();
+  }
+  return undefined;
 }
 
 export const uploadDocument = async (req: Request, res: Response<ApiResponse<DocumentDTO>>) => {

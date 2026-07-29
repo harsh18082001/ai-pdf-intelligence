@@ -4,12 +4,28 @@ import { AppError } from '../middlewares/error-handler.js';
 import type { ApiResponse, MessageDTO } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 
+function getClientId(req: Request): string | undefined {
+  const headerId = req.headers['x-client-id'];
+  if (typeof headerId === 'string' && headerId.trim().length > 0) {
+    return headerId.trim();
+  }
+  const queryId = req.query.clientId;
+  if (typeof queryId === 'string' && queryId.trim().length > 0) {
+    return queryId.trim();
+  }
+  const bodyId = req.body?.clientId;
+  if (typeof bodyId === 'string' && bodyId.trim().length > 0) {
+    return bodyId.trim();
+  }
+  return undefined;
+}
+
 export const sendMessage = async (req: Request, res: Response<ApiResponse<{ message: string }>>) => {
   const documentId = parseInt((req.params.documentId as string) || '0', 10);
   if (isNaN(documentId)) throw new AppError('Invalid document ID', 400);
 
   const { message } = req.body;
-  const clientId = req.headers['x-client-id'] as string | undefined;
+  const clientId = getClientId(req);
   
   const response = await chatService.sendMessage(documentId, message, clientId);
 
@@ -32,7 +48,7 @@ export const streamMessage = async (req: Request, res: Response) => {
     return;
   }
 
-  const clientId = req.headers['x-client-id'] as string | undefined;
+  const clientId = getClientId(req);
 
   // Set headers for Server-Sent Events
   res.writeHead(200, {
@@ -44,9 +60,14 @@ export const streamMessage = async (req: Request, res: Response) => {
   res.flushHeaders();
 
   try {
-    await chatService.streamMessage(documentId, message, (chunk) => {
-      res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-    }, clientId);
+    await chatService.streamMessage(
+      documentId,
+      message,
+      (chunk) => {
+        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      },
+      clientId
+    );
 
     res.write('data: [DONE]\n\n');
     res.end();
