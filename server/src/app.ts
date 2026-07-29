@@ -20,8 +20,8 @@ const corsOptions: cors.CorsOptions = {
 
 app.use(cors(corsOptions));
 
-// Explicitly handle OPTIONS preflight for ALL routes
-app.options('*', cors(corsOptions));
+// Explicitly handle OPTIONS preflight for ALL routes (Express 5 syntax)
+app.options('/{0,}', cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
