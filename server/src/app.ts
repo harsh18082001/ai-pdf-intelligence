@@ -10,37 +10,18 @@ const app = express();
 // Trust Vercel's reverse proxy for accurate client IP in rate limiting
 app.set('trust proxy', 1);
 
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'https://ai-pdf-intelligence.vercel.app',
-];
+// CORS — must be the VERY FIRST middleware before anything else
+const corsOptions: cors.CorsOptions = {
+  origin: true, // Reflect the request origin — simplest, most reliable for Vercel
+  credentials: true,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id', 'X-Requested-With'],
+};
 
-if (env.CORS_ORIGIN) {
-  const customOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
-  allowedOrigins.push(...customOrigins);
-}
+app.use(cors(corsOptions));
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
-      if (!origin) return callback(null, true);
-
-      if (
-        allowedOrigins.includes(origin) ||
-        origin.endsWith('.vercel.app') ||
-        process.env.NODE_ENV !== 'production'
-      ) {
-        return callback(null, true);
-      }
-      return callback(null, true); // Fallback allow for maximum compatibility
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id', 'X-Requested-With'],
-  })
-);
+// Explicitly handle OPTIONS preflight for ALL routes
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
