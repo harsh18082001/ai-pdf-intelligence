@@ -1,11 +1,8 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { useGetDocumentQuery, documentApi } from '@/api/documentApi';
+import { useGetDocumentQuery } from '@/api/documentApi';
 import { MetadataPanel } from '@/components/documents/MetadataPanel';
 import { Button } from '@/components/ui/button';
-import { useEffect } from 'react';
-import { useAppDispatch } from '@/store/hooks';
-import { supabase } from '@/lib/supabase';
 
 import { PDFViewer } from '@/components/documents/PDFViewer';
 import { ChatInterface } from '@/components/chat/ChatInterface';
@@ -14,40 +11,11 @@ export function DocumentPage() {
   const { id } = useParams<{ id: string }>();
   const documentId = parseInt(id || '0', 10);
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
 
   const { data: document, isError } = useGetDocumentQuery(documentId, {
     skip: !documentId,
+    pollingInterval: 3000,
   });
-
-  useEffect(() => {
-    if (!documentId || !import.meta.env.VITE_SUPABASE_URL) return;
-
-    const channel = supabase
-      .channel(`document-${documentId}-updates`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'documents',
-          filter: `id=eq.${documentId}`
-        },
-        (payload) => {
-          // Instantly update the RTK Query cache when the DB changes
-          dispatch(
-            documentApi.util.updateQueryData('getDocument', documentId, (draft) => {
-              Object.assign(draft, payload.new);
-            })
-          );
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [documentId, dispatch]);
 
   if (!documentId || isError) {
     return (

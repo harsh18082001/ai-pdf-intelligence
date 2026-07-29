@@ -1,47 +1,12 @@
-import { useEffect } from 'react';
-import { useAppDispatch } from '@/store/hooks';
-import { useGetDocumentsQuery, documentApi } from '@/api/documentApi';
-import { supabase } from '@/lib/supabase';
+import { useGetDocumentsQuery } from '@/api/documentApi';
 import { DocumentCard } from './DocumentCard';
 import { FileText, Loader2 } from 'lucide-react';
 import { UploadModal } from './UploadModal';
 
 export function DocumentList() {
-  const dispatch = useAppDispatch();
-  const { data: documents = [], isLoading, error } = useGetDocumentsQuery();
-
-  useEffect(() => {
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-      return;
-    }
-
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'documents',
-        },
-        (payload) => {
-          // Manually update the RTK Query cache when the DB changes
-          dispatch(
-            documentApi.util.updateQueryData('getDocuments', undefined, (draft) => {
-              const docIndex = draft.findIndex((d) => d.id === payload.new.id);
-              if (docIndex !== -1) {
-                draft[docIndex] = { ...draft[docIndex], ...payload.new };
-              }
-            })
-          );
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [dispatch]);
+  const { data: documents = [], isLoading, error } = useGetDocumentsQuery(undefined, {
+    pollingInterval: 3000, // Poll every 3s to update status when processing
+  });
 
   if (isLoading) {
     return (

@@ -18,8 +18,11 @@ export class DocumentRepository {
   }
 
   async findAll(clientId?: string): Promise<Document[]> {
+    if (!clientId || clientId.trim().length === 0) {
+      return [];
+    }
     return prisma.document.findMany({
-      where: clientId ? { clientId } : undefined,
+      where: { clientId: clientId.trim() },
       orderBy: {
         createdAt: 'desc',
       },
