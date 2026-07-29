@@ -1,131 +1,57 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { store } from '@/store/store';
-import { documentApi } from '@/api/documentApi';
+import { openDB } from 'idb';
 
-export interface UserProfile {
-  sub: string;
-  email?: string;
-  name?: string;
-  picture?: string;
-  idToken: string;
+const DB_NAME = 'dociq_user_db';
+const STORE_NAME = 'user_config';
+
+async function initUserDB() {
+  return openDB(DB_NAME, 1, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    },
+  });
+}
+
+export async function getStoredClientId(): Promise<string> {
+  try {
+    const db = await initUserDB();
+    let clientId = await db.get(STORE_NAME, 'clientId');
+    if (!clientId) {
+      clientId = localStorage.getItem('dociq_client_id');
+    }
+    if (!clientId) {
+      clientId = 'usr_' + crypto.randomUUID();
+    }
+    await db.put(STORE_NAME, clientId, 'clientId');
+    localStorage.setItem('dociq_client_id', clientId);
+    return clientId;
+  } catch {
+    let clientId = localStorage.getItem('dociq_client_id');
+    if (!clientId) {
+      clientId = 'usr_' + crypto.randomUUID();
+      localStorage.setItem('dociq_client_id', clientId);
+    }
+    return clientId;
+  }
 }
 
 interface AuthContextType {
-  user: UserProfile | null;
-  guestSessionId: string;
-  isGuest: boolean;
-  loginWithGoogle: (credential: string) => Promise<void>;
-  logout: () => void;
+  clientId: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function parseJwt(token: string) {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch (e) {
-    return null;
-  }
-}
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [guestSessionId, setGuestSessionId] = useState<string>('');
+  const [clientId, setClientId] = useState<string>('');
 
   useEffect(() => {
-    // 1. Initialize or load Guest Session ID
-    let guestId = localStorage.getItem('dociq_guest_session_id');
-    if (!guestId) {
-      guestId = 'guest_' + crypto.randomUUID();
-      localStorage.setItem('dociq_guest_session_id', guestId);
-    }
-    setGuestSessionId(guestId);
-
-    // 2. Load stored Google Token if present
-    const storedToken = localStorage.getItem('dociq_google_token');
-    if (storedToken) {
-      const payload = parseJwt(storedToken);
-      if (payload && payload.exp && payload.exp * 1000 > Date.now()) {
-        setUser({
-          sub: payload.sub,
-          email: payload.email,
-          name: payload.name,
-          picture: payload.picture,
-          idToken: storedToken,
-        });
-      } else {
-        localStorage.removeItem('dociq_google_token');
-      }
-    }
+    getStoredClientId().then((id) => setClientId(id));
   }, []);
 
-  const loginWithGoogle = async (credential: string) => {
-    const payload = parseJwt(credential);
-    if (!payload || !payload.sub) return;
-
-    localStorage.setItem('dociq_google_token', credential);
-    const newUserProfile: UserProfile = {
-      sub: payload.sub,
-      email: payload.email,
-      name: payload.name,
-      picture: payload.picture,
-      idToken: credential,
-    };
-
-    setUser(newUserProfile);
-
-    // 1. Automatically migrate guest documents to this Google account
-    const currentGuestId = localStorage.getItem('dociq_guest_session_id');
-    if (currentGuestId) {
-      try {
-        const baseUrl = import.meta.env.VITE_API_URL || '/api';
-        await fetch(`${baseUrl}/auth/migrate-guest`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${credential}`,
-          },
-          body: JSON.stringify({ guestSessionId: currentGuestId }),
-        });
-
-        // Generate a new clean guest session ID for future guest usage
-        const newGuestId = 'guest_' + crypto.randomUUID();
-        localStorage.setItem('dociq_guest_session_id', newGuestId);
-        setGuestSessionId(newGuestId);
-      } catch (err) {
-        console.error('Failed to migrate guest documents:', err);
-      }
-    }
-
-    // 2. Reset RTK Query API state to refetch all documents under the new Google account
-    store.dispatch(documentApi.util.resetApiState());
-  };
-
-  const logout = () => {
-    localStorage.removeItem('dociq_google_token');
-    setUser(null);
-    store.dispatch(documentApi.util.resetApiState());
-    window.location.reload();
-  };
-
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        guestSessionId,
-        isGuest: !user,
-        loginWithGoogle,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ clientId }}>
       {children}
     </AuthContext.Provider>
   );

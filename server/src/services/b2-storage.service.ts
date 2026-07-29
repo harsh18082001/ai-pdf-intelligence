@@ -26,19 +26,18 @@ class B2StorageService {
       });
       logger.info('Initialized Backblaze B2 S3 Storage Client');
     } else {
-      logger.warn('Backblaze B2 credentials missing in env config. B2 storage disabled.');
+      logger.info('B2 storage disabled (using local disk + client IndexedDB).');
     }
   }
 
-  async uploadPdf(fileBuffer: Buffer, originalFileName: string): Promise<{ storageKey: string }> {
+  async uploadPdf(fileBuffer: Buffer, originalFileName: string): Promise<{ storageKey: string | null }> {
+    if (!this.s3Client) {
+      return { storageKey: null };
+    }
+
     const fileExtension = originalFileName.endsWith('.pdf') ? '' : '.pdf';
     const cleanFileName = originalFileName.toLowerCase().startsWith('dociq_') ? originalFileName : `dociq_${originalFileName}`;
     const storageKey = `documents/${uuidv4()}_${cleanFileName}${fileExtension}`;
-
-    if (!this.s3Client) {
-      logger.warn({ storageKey }, 'B2 client not initialized, returning mock storageKey');
-      return { storageKey };
-    }
 
     try {
       const command = new PutObjectCommand({
@@ -52,13 +51,13 @@ class B2StorageService {
       logger.info({ storageKey, bucket: this.bucketName }, 'Successfully uploaded PDF to Backblaze B2');
       return { storageKey };
     } catch (error: any) {
-      logger.error({ err: error, storageKey }, 'Failed to upload PDF to Backblaze B2');
-      throw new Error(`Backblaze B2 Upload Failed: ${error.message}`);
+      logger.warn({ err: error.message, storageKey }, 'Cloud B2 upload skipped');
+      return { storageKey: null };
     }
   }
 
   async getPresignedUrl(storageKey: string, expiresInSeconds: number = 3600): Promise<string> {
-    if (!this.s3Client) {
+    if (!this.s3Client || !storageKey) {
       return '';
     }
 
@@ -71,13 +70,12 @@ class B2StorageService {
       const url = await getSignedUrl(this.s3Client, command, { expiresIn: expiresInSeconds });
       return url;
     } catch (error: any) {
-      logger.error({ err: error, storageKey }, 'Failed to generate presigned URL from Backblaze B2');
       return '';
     }
   }
 
   async getPdfBuffer(storageKey: string): Promise<Buffer | null> {
-    if (!this.s3Client) return null;
+    if (!this.s3Client || !storageKey) return null;
 
     try {
       const command = new GetObjectCommand({
@@ -91,13 +89,12 @@ class B2StorageService {
       const byteArray = await response.Body.transformToByteArray();
       return Buffer.from(byteArray);
     } catch (error: any) {
-      logger.error({ err: error, storageKey }, 'Failed to get PDF buffer from Backblaze B2');
       return null;
     }
   }
 
   async deletePdf(storageKey: string): Promise<void> {
-    if (!this.s3Client) return;
+    if (!this.s3Client || !storageKey) return;
 
     try {
       const command = new DeleteObjectCommand({
@@ -106,9 +103,8 @@ class B2StorageService {
       });
 
       await this.s3Client.send(command);
-      logger.info({ storageKey }, 'Successfully deleted PDF from Backblaze B2');
     } catch (error: any) {
-      logger.error({ err: error, storageKey }, 'Failed to delete PDF from Backblaze B2');
+      // Safe no-op
     }
   }
 }

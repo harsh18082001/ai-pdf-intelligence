@@ -50,11 +50,11 @@ class DocumentService {
     await fs.promises.writeFile(localFilePath, file.data);
 
     // 3. Optional background sync to Backblaze B2 if configured
-    let b2StorageKey: string | null = null;
     try {
       const b2Res = await b2StorageService.uploadPdf(file.data, formattedName);
-      b2StorageKey = b2Res.storageKey;
-      await documentRepository.updateStorageKey(doc.id, b2StorageKey);
+      if (b2Res.storageKey) {
+        await documentRepository.updateStorageKey(doc.id, b2Res.storageKey);
+      }
     } catch (err: any) {
       logger.warn({ err: err.message, docId: doc.id }, 'B2 cloud sync skipped or failed, using local disk storage');
     }
