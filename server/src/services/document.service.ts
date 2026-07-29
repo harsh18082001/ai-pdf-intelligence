@@ -10,9 +10,13 @@ import type { Document } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const UPLOAD_DIR = process.env.NODE_ENV === 'production' ? '/tmp/uploads' : path.join(process.cwd(), 'uploads');
+try {
+  if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  }
+} catch {
+  // Vercel serverless: /tmp may already exist or have restrictions
 }
 
 async function toDTO(doc: Document): Promise<DocumentDTO> {

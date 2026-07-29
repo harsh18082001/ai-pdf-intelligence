@@ -8,7 +8,7 @@ import { b2StorageService } from '../services/b2-storage.service.js';
 import fs from 'fs';
 import path from 'path';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
+const UPLOAD_DIR = process.env.NODE_ENV === 'production' ? '/tmp/uploads' : path.join(process.cwd(), 'uploads');
 
 export const uploadDocument = async (req: Request, res: Response<ApiResponse<DocumentDTO>>) => {
   if (!req.files || !req.files.file) {
