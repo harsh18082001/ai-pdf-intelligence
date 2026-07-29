@@ -45,7 +45,7 @@ export function DocumentPage() {
 
       <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 pb-8 lg:pb-0">
         {/* Left Column: Metadata and Chat */}
-        <div className="w-full lg:w-1/3 flex flex-col gap-6 h-[700px] lg:h-full lg:overflow-y-auto pr-0 lg:pr-2">
+        <div className="w-full lg:w-1/3 flex flex-col gap-6 lg:h-full lg:overflow-y-auto pr-0 lg:pr-2">
           <MetadataPanel documentId={documentId} />
 
           {/* Chat Interface */}

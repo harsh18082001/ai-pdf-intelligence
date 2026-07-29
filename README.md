@@ -1,5 +1,6 @@
 # DocIQ — Enterprise-Grade AI-Powered PDF Intelligence & RAG Platform
 
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-ai--pdf--intelligence.vercel.app-success?style=for-the-badge&logo=vercel)](https://ai-pdf-intelligence.vercel.app/)
 ![DocIQ Banner](https://img.shields.io/badge/DocIQ-AI--Powered%20PDF%20Intelligence-blueviolet?style=for-the-badge&logo=openai)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React 19](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
@@ -12,6 +13,10 @@
 [![Node.js](https://img.shields.io/badge/Node.js_22+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 
 **DocIQ** is a full-stack, enterprise-grade AI intelligence platform designed to extract deep context, structured insights, and interactive real-time answers from complex unstructured PDF documents. Powered by modern **Retrieval-Augmented Generation (RAG)**, serverless **Pinecone vector embeddings**, **Google Gemini LLM pipelines with automated multi-model resilience**, **Prisma + PostgreSQL**, and a **React 19 + Redux Toolkit** glassmorphic interface, DocIQ turns static files into dynamic knowledge repositories.
+
+---
+
+[🚀 **Try the Live Application**](https://ai-pdf-intelligence.vercel.app/)
 
 ---
 
