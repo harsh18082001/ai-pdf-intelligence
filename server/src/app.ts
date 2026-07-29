@@ -29,7 +29,7 @@ app.use(
     limits: { fileSize: (env.MAX_FILE_SIZE_MB || 50) * 1024 * 1024 },
     abortOnLimit: true,
     useTempFiles: false,
-  })
+  }),
 );
 
 // Apply rate limiting to all requests

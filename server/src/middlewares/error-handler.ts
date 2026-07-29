@@ -23,7 +23,7 @@ export const errorHandler = (
   err: any,
   req: Request,
   res: Response<ApiResponse>,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   let statusCode = 500;
   let message = 'Internal Server Error';
@@ -56,7 +56,7 @@ export const errorHandler = (
           params: req.params,
         },
       },
-      err.message || 'Server Error'
+      err.message || 'Server Error',
     );
   }
 

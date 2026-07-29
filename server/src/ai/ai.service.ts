@@ -29,14 +29,17 @@ class AIService implements AIProvider {
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
-    logger.info({ model: env.GEMINI_EMBEDDING_MODEL, length: text.length }, 'Calling generateEmbedding');
+    logger.info(
+      { model: env.GEMINI_EMBEDDING_MODEL, length: text.length },
+      'Calling generateEmbedding',
+    );
     return this.withRetry(() => this.provider.generateEmbedding(text));
   }
 
   async generateEmbeddings(texts: string[]): Promise<number[][]> {
     logger.info(
       { model: env.GEMINI_EMBEDDING_MODEL, count: texts.length },
-      'Calling generateEmbeddings'
+      'Calling generateEmbeddings',
     );
     return this.withRetry(() => this.provider.generateEmbeddings(texts));
   }
@@ -44,7 +47,7 @@ class AIService implements AIProvider {
   private async withRetry<T>(
     operation: () => Promise<T>,
     maxRetries: number = 2,
-    baseDelayMs: number = 1000
+    baseDelayMs: number = 1000,
   ): Promise<T> {
     let attempt = 0;
     while (attempt <= maxRetries) {

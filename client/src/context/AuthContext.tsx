@@ -25,11 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setClientId(id);
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ clientId }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ clientId }}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

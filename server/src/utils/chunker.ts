@@ -21,13 +21,13 @@ export function estimateTokenCount(text: string): number {
 export function chunkText(
   text: string,
   chunkSize: number = CHUNK_SIZE,
-  overlap: number = CHUNK_OVERLAP
+  overlap: number = CHUNK_OVERLAP,
 ): ChunkResult[] {
   if (!text) return [];
 
   // Split by paragraphs to try and maintain natural boundaries
   const paragraphs = text.split(/\n\s*\n/);
-  
+
   const chunks: ChunkResult[] = [];
   let currentChunk = '';
   let currentTokens = 0;
@@ -52,7 +52,7 @@ export function chunkText(
             tokenCount: currentTokens,
             index: index++,
           });
-          
+
           // Start new chunk with overlap if possible
           // A simplified approach for overlap: just keep the last sentence
           currentChunk = sentenceStr;

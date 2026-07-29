@@ -3,7 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FileText, Calendar, HardDrive, Hash, CheckCircle2, Loader2, AlertCircle, Clock } from 'lucide-react';
+import {
+  FileText,
+  Calendar,
+  HardDrive,
+  Hash,
+  CheckCircle2,
+  Loader2,
+  AlertCircle,
+  Clock,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -18,7 +27,7 @@ interface MetadataPanelProps {
 export function MetadataPanel({ documentId }: MetadataPanelProps) {
   const { data: document, isLoading } = useGetDocumentQuery(documentId);
   const [executeCommand, { isLoading: isExecuting }] = useExecuteCommandMutation();
-  
+
   const [activeCommand, setActiveCommand] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
@@ -29,7 +38,7 @@ export function MetadataPanel({ documentId }: MetadataPanelProps) {
     setDialogTitle(title);
     setCommandResult('');
     setIsDialogOpen(true);
-    
+
     try {
       const result = await executeCommand({ documentId, command }).unwrap();
       setCommandResult(result.content);
@@ -47,13 +56,25 @@ export function MetadataPanel({ documentId }: MetadataPanelProps) {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'completed':
-        return { color: 'bg-green-500/15 text-green-700 dark:text-green-400', icon: CheckCircle2, label: 'Ready' };
+        return {
+          color: 'bg-green-500/15 text-green-700 dark:text-green-400',
+          icon: CheckCircle2,
+          label: 'Ready',
+        };
       case 'processing':
-        return { color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400', icon: Loader2, label: 'Processing' };
+        return {
+          color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+          icon: Loader2,
+          label: 'Processing',
+        };
       case 'failed':
         return { color: 'bg-destructive/15 text-destructive', icon: AlertCircle, label: 'Failed' };
       case 'ocr_required':
-        return { color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400', icon: AlertCircle, label: 'Needs OCR' };
+        return {
+          color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400',
+          icon: AlertCircle,
+          label: 'Needs OCR',
+        };
       default:
         return { color: 'bg-muted text-muted-foreground', icon: Clock, label: 'Pending' };
     }
@@ -84,8 +105,12 @@ export function MetadataPanel({ documentId }: MetadataPanelProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col space-y-1">
-          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Title</span>
-          <span className="text-sm font-medium line-clamp-2" title={document.title}>{document.title}</span>
+          <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+            Title
+          </span>
+          <span className="text-sm font-medium line-clamp-2" title={document.title}>
+            {document.title}
+          </span>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -113,9 +138,13 @@ export function MetadataPanel({ documentId }: MetadataPanelProps) {
           </div>
 
           <div className="flex flex-col space-y-1 items-start">
-            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">Status</span>
-            <Badge variant="outline" className={cn("border-transparent", statusConfig.color)}>
-              <StatusIcon className={cn("mr-1 h-3 w-3", statusConfig.icon === Loader2 && "animate-spin")} />
+            <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1">
+              Status
+            </span>
+            <Badge variant="outline" className={cn('border-transparent', statusConfig.color)}>
+              <StatusIcon
+                className={cn('mr-1 h-3 w-3', statusConfig.icon === Loader2 && 'animate-spin')}
+              />
               {statusConfig.label}
             </Badge>
           </div>
@@ -137,31 +166,43 @@ export function MetadataPanel({ documentId }: MetadataPanelProps) {
               AI Actions
             </span>
             <div className="flex flex-col gap-2">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start text-left font-normal" 
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left font-normal"
                 onClick={() => handleCommand('summary', 'Document Summary')}
                 disabled={isExecuting}
               >
-                {isExecuting && activeCommand === 'summary' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4 text-primary" />}
+                {isExecuting && activeCommand === 'summary' ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <FileText className="mr-2 h-4 w-4 text-primary" />
+                )}
                 Generate Summary
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full justify-start text-left font-normal"
                 onClick={() => handleCommand('key_points', 'Key Points')}
                 disabled={isExecuting}
               >
-                {isExecuting && activeCommand === 'key_points' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Hash className="mr-2 h-4 w-4 text-primary" />}
+                {isExecuting && activeCommand === 'key_points' ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Hash className="mr-2 h-4 w-4 text-primary" />
+                )}
                 Extract Key Points
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full justify-start text-left font-normal"
                 onClick={() => handleCommand('insights', 'Insights & Analysis')}
                 disabled={isExecuting}
               >
-                {isExecuting && activeCommand === 'insights' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4 text-primary" />}
+                {isExecuting && activeCommand === 'insights' ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="mr-2 h-4 w-4 text-primary" />
+                )}
                 Generate Insights
               </Button>
             </div>
@@ -176,9 +217,7 @@ export function MetadataPanel({ documentId }: MetadataPanelProps) {
           </DialogHeader>
           <div className="flex-1 overflow-y-auto mt-4 pr-2 prose prose-sm dark:prose-invert max-w-none">
             {commandResult ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {commandResult}
-              </ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{commandResult}</ReactMarkdown>
             ) : (
               <div className="flex items-center justify-center p-8 text-muted-foreground">
                 <Loader2 className="h-6 w-6 animate-spin mr-2" /> Generating...

@@ -20,7 +20,9 @@ export function DocumentPage() {
     return (
       <div className="container mx-auto p-4 md:p-8 flex flex-col items-center justify-center min-h-[50vh]">
         <h2 className="text-2xl font-bold mb-2">Document not found</h2>
-        <p className="text-muted-foreground mb-6">The document you're looking for doesn't exist or was deleted.</p>
+        <p className="text-muted-foreground mb-6">
+          The document you're looking for doesn't exist or was deleted.
+        </p>
         <Button onClick={() => navigate('/')}>Return Home</Button>
       </div>
     );
@@ -45,7 +47,7 @@ export function DocumentPage() {
         {/* Left Column: Metadata and Chat */}
         <div className="w-full lg:w-1/3 flex flex-col gap-6 h-[700px] lg:h-full lg:overflow-y-auto pr-0 lg:pr-2">
           <MetadataPanel documentId={documentId} />
-          
+
           {/* Chat Interface */}
           <ChatInterface documentId={documentId} isReady={isReady} />
         </div>

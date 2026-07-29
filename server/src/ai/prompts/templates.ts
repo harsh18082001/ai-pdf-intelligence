@@ -2,9 +2,13 @@ import type { ChatMessage } from '../ai.types.js';
 import { MESSAGE_ROLES } from '../../config/constants.js';
 import type { MessageDTO } from '../../types/index.js';
 
-export function buildQAPrompt(question: string, contextChunks: string[], history: MessageDTO[] = []): ChatMessage[] {
+export function buildQAPrompt(
+  question: string,
+  contextChunks: string[],
+  history: MessageDTO[] = [],
+): ChatMessage[] {
   const context = contextChunks.join('\n\n---\n\n');
-  
+
   const messages: ChatMessage[] = [
     {
       role: MESSAGE_ROLES.SYSTEM,

@@ -10,7 +10,7 @@ export class GeminiProvider implements AIProvider {
     if (!apiKey) {
       throw new Error('Gemini API key is required');
     }
-    
+
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.chatModel = this.genAI.getGenerativeModel({ model: chatModelName });
     this.embeddingModel = this.genAI.getGenerativeModel({ model: embeddingModelName });
@@ -25,7 +25,7 @@ export class GeminiProvider implements AIProvider {
       if (error.status === 503 || error.status === 429 || error.status === 404) {
         console.warn(`Primary model failed with ${error.status}, trying fallbacks...`);
         const fallbacks = ['gemini-3.5-flash', 'gemma-4-26b-a4b-it', 'gemini-flash-lite-latest'];
-        
+
         for (const fallbackName of fallbacks) {
           try {
             console.log(`Trying fallback model: ${fallbackName}`);
@@ -50,7 +50,7 @@ export class GeminiProvider implements AIProvider {
       if (error.status === 503 || error.status === 429 || error.status === 404) {
         console.warn(`Primary model failed with ${error.status}, trying fallbacks...`);
         const fallbacks = ['gemini-3.5-flash', 'gemma-4-26b-a4b-it', 'gemini-flash-lite-latest'];
-        
+
         for (const fallbackName of fallbacks) {
           try {
             console.log(`Trying fallback model: ${fallbackName}`);
@@ -61,13 +61,13 @@ export class GeminiProvider implements AIProvider {
             console.warn(`${fallbackName} also failed with ${fallbackError.status}`);
           }
         }
-        
+
         if (!result) throw error; // If all fallbacks failed, throw the original error
       } else {
         throw error;
       }
     }
-    
+
     for await (const chunk of result.stream) {
       const chunkText = chunk.text();
       if (chunkText) {
@@ -89,11 +89,13 @@ export class GeminiProvider implements AIProvider {
     const result = await this.embeddingModel.batchEmbedContents({
       requests,
     });
-    
+
     return result.embeddings.map((e) => e.values);
   }
 
-  private formatMessagesToPrompt(messages: { role: 'system' | 'user' | 'assistant'; content: string }[]): string {
+  private formatMessagesToPrompt(
+    messages: { role: 'system' | 'user' | 'assistant'; content: string }[],
+  ): string {
     return messages
       .map((m) => {
         const role = m.role.toUpperCase();

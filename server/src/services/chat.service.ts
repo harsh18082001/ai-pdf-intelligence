@@ -10,7 +10,8 @@ import type { MessageDTO, StreamCallback } from '../types/index.js';
 class ChatService {
   private async prepareChat(documentId: number, userMessage: string, clientId?: string) {
     const doc = await documentRepository.findById(documentId);
-    if (!doc || (clientId && doc.clientId !== clientId)) throw new AppError('Document not found', 404);
+    if (!doc || (clientId && doc.clientId !== clientId))
+      throw new AppError('Document not found', 404);
     if (doc.status !== DOCUMENT_STATUS.COMPLETED) {
       throw new AppError('Document is not ready for chat. Current status: ' + doc.status, 400);
     }
@@ -26,7 +27,12 @@ class ChatService {
     const queryEmbedding = await aiService.generateEmbedding(userMessage);
 
     // Retrieve chunks from Pinecone
-    const topChunks = await pineconeService.querySimilar(documentId, queryEmbedding, TOP_K_CHUNKS, clientId);
+    const topChunks = await pineconeService.querySimilar(
+      documentId,
+      queryEmbedding,
+      TOP_K_CHUNKS,
+      clientId,
+    );
     if (topChunks.length === 0) {
       throw new AppError('No document content available for context', 400);
     }
@@ -36,12 +42,12 @@ class ChatService {
     // Retrieve previous messages for chat history (exclude the current user message we just saved at the very end)
     const allMessages = await messageRepository.findByDocumentId(documentId);
     const priorMessages = allMessages.slice(0, -1); // Remove the newly saved user message
-    const history = priorMessages.slice(-6).map(m => ({
+    const history = priorMessages.slice(-6).map((m) => ({
       id: m.id,
       documentId: m.documentId,
       role: m.role,
       content: m.content,
-      createdAt: m.createdAt.toISOString()
+      createdAt: m.createdAt.toISOString(),
     }));
 
     // Build prompt
@@ -70,12 +76,12 @@ class ChatService {
     documentId: number,
     userMessage: string,
     onChunk: StreamCallback,
-    clientId?: string
+    clientId?: string,
   ): Promise<string> {
     const { messages } = await this.prepareChat(documentId, userMessage, clientId);
 
     const stream = aiService.chatCompletionStream({ messages });
-    
+
     let fullResponse = '';
     for await (const chunk of stream) {
       fullResponse += chunk;

@@ -21,7 +21,7 @@ export function UploadModal() {
     try {
       const doc = await uploadDocument(file).unwrap();
       await savePDF(doc.id, file);
-      
+
       toast.success('Document uploaded successfully');
       setOpen(false);
     } catch (error: any) {

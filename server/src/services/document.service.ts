@@ -65,7 +65,10 @@ class DocumentService {
     await documentRepository.delete(id);
   }
 
-  async getProcessingStatus(id: number, clientId?: string): Promise<{ status: string; errorMsg?: string }> {
+  async getProcessingStatus(
+    id: number,
+    clientId?: string,
+  ): Promise<{ status: string; errorMsg?: string }> {
     const doc = await documentRepository.findById(id);
     if (!doc || (clientId && doc.clientId !== clientId)) {
       throw new AppError('Document not found', 404);

@@ -22,18 +22,15 @@ export function UploadDropzone({ onFileSelect, isLoading }: UploadDropzoneProps)
     setIsDragging(false);
   }, []);
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-      
-      const file = e.dataTransfer.files[0];
-      if (file && file.type === 'application/pdf') {
-        setSelectedFile(file);
-      }
-    },
-    []
-  );
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+      setSelectedFile(file);
+    }
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,8 +84,8 @@ export function UploadDropzone({ onFileSelect, isLoading }: UploadDropzoneProps)
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={cn(
-        "border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center gap-4 transition-colors text-center cursor-pointer",
-        isDragging ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:bg-muted/50"
+        'border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center gap-4 transition-colors text-center cursor-pointer',
+        isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:bg-muted/50',
       )}
     >
       <input
@@ -99,7 +96,10 @@ export function UploadDropzone({ onFileSelect, isLoading }: UploadDropzoneProps)
         id="file-upload"
         disabled={isLoading}
       />
-      <label htmlFor="file-upload" className="flex flex-col items-center justify-center gap-4 w-full cursor-pointer">
+      <label
+        htmlFor="file-upload"
+        className="flex flex-col items-center justify-center gap-4 w-full cursor-pointer"
+      >
         <div className="p-4 rounded-full bg-primary/10">
           <UploadCloud className="h-8 w-8 text-primary" />
         </div>

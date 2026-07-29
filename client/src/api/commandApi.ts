@@ -19,7 +19,9 @@ export const commandApi = baseApi.injectEndpoints({
         if (!response.data) throw new Error('No data returned');
         return response.data;
       },
-      invalidatesTags: (_result, _error, { documentId }) => [{ type: 'AIArtifact', id: documentId }],
+      invalidatesTags: (_result, _error, { documentId }) => [
+        { type: 'AIArtifact', id: documentId },
+      ],
     }),
   }),
 });

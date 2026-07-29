@@ -47,7 +47,7 @@ export class DocumentRepository {
 
   async updateProcessingResult(
     id: number,
-    data: { pageCount: number; status: string; errorMsg?: string }
+    data: { pageCount: number; status: string; errorMsg?: string },
   ): Promise<Document> {
     return prisma.document.update({
       where: { id },

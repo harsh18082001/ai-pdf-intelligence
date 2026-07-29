@@ -2,13 +2,21 @@ import { documentRepository } from '../repositories/document.repository.js';
 import { chunkRepository } from '../repositories/chunk.repository.js';
 import { aiArtifactRepository } from '../repositories/ai-artifact.repository.js';
 import { aiService } from '../ai/ai.service.js';
-import { buildSummaryPrompt, buildKeyPointsPrompt, buildInsightsPrompt } from '../ai/prompts/templates.js';
+import {
+  buildSummaryPrompt,
+  buildKeyPointsPrompt,
+  buildInsightsPrompt,
+} from '../ai/prompts/templates.js';
 import { AppError } from '../middlewares/error-handler.js';
 import { ARTIFACT_TYPES, DOCUMENT_STATUS } from '../config/constants.js';
 import type { AIArtifactDTO } from '../types/index.js';
 
 class CommandService {
-  async execute(documentId: number, command: string, regenerate: boolean = false): Promise<AIArtifactDTO> {
+  async execute(
+    documentId: number,
+    command: string,
+    regenerate: boolean = false,
+  ): Promise<AIArtifactDTO> {
     if (!ARTIFACT_TYPES.includes(command)) {
       throw new AppError(`Invalid command: ${command}`, 400);
     }
@@ -23,7 +31,7 @@ class CommandService {
     if (!regenerate) {
       console.log(`[Command] Checking database for ${command} on document ${documentId}`);
       const cached = await aiArtifactRepository.findByDocumentAndType(documentId, command);
-      
+
       if (cached) {
         console.log(`[Command] Cache hit in PostgreSQL for ${command}`);
         return {

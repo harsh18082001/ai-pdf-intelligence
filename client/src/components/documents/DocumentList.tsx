@@ -32,7 +32,8 @@ export function DocumentList() {
         </div>
         <h3 className="text-xl font-semibold mb-2">No documents yet</h3>
         <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-          Upload your first PDF document to start chatting, generating summaries, and extracting insights.
+          Upload your first PDF document to start chatting, generating summaries, and extracting
+          insights.
         </p>
         <UploadModal />
       </div>

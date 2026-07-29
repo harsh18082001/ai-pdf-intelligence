@@ -47,13 +47,25 @@ export function DocumentCard({ document }: DocumentCardProps) {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'completed':
-        return { color: 'bg-green-500/15 text-green-700 dark:text-green-400', icon: CheckCircle2, label: 'Ready' };
+        return {
+          color: 'bg-green-500/15 text-green-700 dark:text-green-400',
+          icon: CheckCircle2,
+          label: 'Ready',
+        };
       case 'processing':
-        return { color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400', icon: Loader2, label: 'Processing' };
+        return {
+          color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
+          icon: Loader2,
+          label: 'Processing',
+        };
       case 'failed':
         return { color: 'bg-destructive/15 text-destructive', icon: AlertCircle, label: 'Failed' };
       case 'ocr_required':
-        return { color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400', icon: AlertCircle, label: 'Needs OCR' };
+        return {
+          color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400',
+          icon: AlertCircle,
+          label: 'Needs OCR',
+        };
       default:
         return { color: 'bg-muted text-muted-foreground', icon: Clock, label: 'Pending' };
     }
@@ -72,12 +84,17 @@ export function DocumentCard({ document }: DocumentCardProps) {
               <FileText className="h-6 w-6 text-primary" />
             </div>
             <Badge variant="outline" className={`ml-2 border-transparent ${statusConfig.color}`}>
-              <StatusIcon className={`mr-1 h-3 w-3 ${statusConfig.icon === Loader2 ? 'animate-spin' : ''}`} />
+              <StatusIcon
+                className={`mr-1 h-3 w-3 ${statusConfig.icon === Loader2 ? 'animate-spin' : ''}`}
+              />
               {statusConfig.label}
             </Badge>
           </CardHeader>
           <CardContent className="p-4 pt-2 flex-1">
-            <h3 className="font-semibold line-clamp-2 mb-1 group-hover:text-primary transition-colors" title={document.title}>
+            <h3
+              className="font-semibold line-clamp-2 mb-1 group-hover:text-primary transition-colors"
+              title={document.title}
+            >
               {document.title}
             </h3>
             <p className="text-xs text-muted-foreground mb-3">
@@ -88,9 +105,7 @@ export function DocumentCard({ document }: DocumentCardProps) {
                 {(document.fileSize / 1024 / 1024).toFixed(1)} MB
               </span>
               {document.pageCount > 0 && (
-                <span className="bg-muted px-2 py-1 rounded-md">
-                  {document.pageCount} Pages
-                </span>
+                <span className="bg-muted px-2 py-1 rounded-md">{document.pageCount} Pages</span>
               )}
             </div>
           </CardContent>
@@ -111,19 +126,22 @@ export function DocumentCard({ document }: DocumentCardProps) {
           </CardFooter>
         </Card>
       </Link>
-      
+
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent onClick={(e) => e.stopPropagation()}>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure you want to delete this document?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your
-              document and remove the data from our servers.
+              This action cannot be undone. This will permanently delete your document and remove
+              the data from our servers.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

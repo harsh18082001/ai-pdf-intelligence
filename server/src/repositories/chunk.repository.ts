@@ -4,7 +4,7 @@ import type { Chunk } from '@prisma/client';
 export class ChunkRepository {
   async createMany(
     documentId: number,
-    chunks: Array<{ chunkIndex: number; text: string; tokenCount: number }>
+    chunks: Array<{ chunkIndex: number; text: string; tokenCount: number }>,
   ): Promise<number> {
     const result = await prisma.chunk.createMany({
       data: chunks.map((chunk) => ({

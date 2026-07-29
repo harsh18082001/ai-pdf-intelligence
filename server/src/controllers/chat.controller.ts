@@ -20,13 +20,16 @@ function getClientId(req: Request): string | undefined {
   return undefined;
 }
 
-export const sendMessage = async (req: Request, res: Response<ApiResponse<{ message: string }>>) => {
+export const sendMessage = async (
+  req: Request,
+  res: Response<ApiResponse<{ message: string }>>,
+) => {
   const documentId = parseInt((req.params.documentId as string) || '0', 10);
   if (isNaN(documentId)) throw new AppError('Invalid document ID', 400);
 
   const { message } = req.body;
   const clientId = getClientId(req);
-  
+
   const response = await chatService.sendMessage(documentId, message, clientId);
 
   res.status(200).json({
@@ -54,7 +57,7 @@ export const streamMessage = async (req: Request, res: Response) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',
-    'Connection': 'keep-alive',
+    Connection: 'keep-alive',
     'X-Accel-Buffering': 'no',
   });
   res.flushHeaders();
@@ -66,7 +69,7 @@ export const streamMessage = async (req: Request, res: Response) => {
       (chunk) => {
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
       },
-      clientId
+      clientId,
     );
 
     res.write('data: [DONE]\n\n');

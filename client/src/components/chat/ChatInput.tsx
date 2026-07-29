@@ -17,7 +17,7 @@ export function ChatInput({ onSendMessage, disabled, isStreaming }: ChatInputPro
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!input.trim() || disabled || isStreaming) return;
-    
+
     onSendMessage(input);
     setInput('');
   };
@@ -50,12 +50,14 @@ export function ChatInput({ onSendMessage, disabled, isStreaming }: ChatInputPro
           disabled={disabled || isStreaming}
           rows={1}
         />
-        <Button 
-          type="submit" 
-          size="icon" 
+        <Button
+          type="submit"
+          size="icon"
           className={cn(
-            "h-10 w-10 shrink-0 rounded-lg transition-all",
-            input.trim() && !disabled && !isStreaming ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground opacity-50"
+            'h-10 w-10 shrink-0 rounded-lg transition-all',
+            input.trim() && !disabled && !isStreaming
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground opacity-50',
           )}
           disabled={!input.trim() || disabled || isStreaming}
         >

@@ -26,7 +26,8 @@ class ProcessingService {
 
       // 3. OCR check
       if (!text || text.trim().length < 50) {
-        const ocrMsg = 'This PDF appears to contain scanned pages. OCR support is planned for a future release.';
+        const ocrMsg =
+          'This PDF appears to contain scanned pages. OCR support is planned for a future release.';
         await documentRepository.updateStatus(documentId, DOCUMENT_STATUS.OCR_REQUIRED, ocrMsg);
         logger.warn({ documentId }, 'Document requires OCR');
         return;
@@ -51,11 +52,11 @@ class ProcessingService {
 
       // 7. Save to SQLite and Pinecone
       await chunkRepository.createMany(documentId, dbChunks);
-      
+
       const pineconeChunks = chunks.map((chunk, index) => ({
         chunkIndex: chunk.index,
         text: chunk.text,
-        embedding: embeddings[index]!
+        embedding: embeddings[index]!,
       }));
       await pineconeService.upsertChunks(documentId, pineconeChunks, clientId);
 
@@ -71,7 +72,7 @@ class ProcessingService {
       await documentRepository.updateStatus(
         documentId,
         DOCUMENT_STATUS.FAILED,
-        error.message || 'Unknown processing error'
+        error.message || 'Unknown processing error',
       );
     }
   }

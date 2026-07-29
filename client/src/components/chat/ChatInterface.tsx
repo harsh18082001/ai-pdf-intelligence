@@ -44,12 +44,10 @@ export function ChatInterface({ documentId, isReady }: ChatInterfaceProps) {
   }
 
   return (
-    <div 
+    <div
       className={cn(
-        "flex-1 border rounded-lg bg-card text-card-foreground shadow-sm flex flex-col transition-all duration-200",
-        isMaximized 
-          ? "fixed inset-4 z-50 shadow-2xl" 
-          : "min-h-[400px] relative"
+        'flex-1 border rounded-lg bg-card text-card-foreground shadow-sm flex flex-col transition-all duration-200',
+        isMaximized ? 'fixed inset-4 z-50 shadow-2xl' : 'min-h-[400px] relative',
       )}
     >
       <div className="p-4 border-b font-semibold flex items-center justify-between">
@@ -69,21 +67,14 @@ export function ChatInterface({ documentId, isReady }: ChatInterfaceProps) {
             size="icon"
             className="h-8 w-8 text-muted-foreground hover:text-foreground"
             onClick={() => setIsMaximized(!isMaximized)}
-            title={isMaximized ? "Minimize" : "Maximize"}
+            title={isMaximized ? 'Minimize' : 'Maximize'}
           >
-            {isMaximized ? (
-              <Minimize2 className="h-4 w-4" />
-            ) : (
-              <Maximize2 className="h-4 w-4" />
-            )}
+            {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </Button>
         </div>
       </div>
-      
-      <div 
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto scroll-smooth flex flex-col relative"
-      >
+
+      <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-smooth flex flex-col relative">
         {isLoadingHistory ? (
           <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground gap-2">
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -104,10 +95,7 @@ export function ChatInterface({ documentId, isReady }: ChatInterfaceProps) {
         )}
       </div>
 
-      <ChatInput 
-        onSendMessage={sendMessage} 
-        isStreaming={isStreaming} 
-      />
+      <ChatInput onSendMessage={sendMessage} isStreaming={isStreaming} />
     </div>
   );
 }

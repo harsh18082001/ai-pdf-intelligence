@@ -15,7 +15,7 @@ export function useChat(documentId: number) {
   const { data: history = [], isLoading: isLoadingHistory } = useGetChatHistoryQuery(documentId, {
     skip: !documentId,
   });
-  
+
   const dispatch = useAppDispatch();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -41,13 +41,15 @@ export function useChat(documentId: number) {
         { id: userMsgId, role: 'user', content },
         { id: assistantMsgId, role: 'assistant', content: '', isStreaming: true },
       ]);
-      
+
       setIsStreaming(true);
 
       const encodedMessage = encodeURIComponent(content);
       const baseUrl = import.meta.env.VITE_API_URL || '/api';
       const clientId = localStorage.getItem('dociq_client_id');
-      const eventSource = new EventSource(`${baseUrl}/documents/${documentId}/chat/stream?message=${encodedMessage}${clientId ? `&clientId=${clientId}` : ''}`);
+      const eventSource = new EventSource(
+        `${baseUrl}/documents/${documentId}/chat/stream?message=${encodedMessage}${clientId ? `&clientId=${clientId}` : ''}`,
+      );
 
       eventSource.onmessage = (event) => {
         const data = event.data;
@@ -63,7 +65,7 @@ export function useChat(documentId: number) {
 
         try {
           const chunk = JSON.parse(data);
-          
+
           if (chunk.error) {
             toast.error(chunk.error);
             eventSource.close();
@@ -74,10 +76,8 @@ export function useChat(documentId: number) {
 
           setMessages((prev) =>
             prev.map((msg) =>
-              msg.id === assistantMsgId
-                ? { ...msg, content: msg.content + chunk }
-                : msg
-            )
+              msg.id === assistantMsgId ? { ...msg, content: msg.content + chunk } : msg,
+            ),
           );
         } catch (e) {
           console.error('Error parsing chunk', e);
@@ -90,13 +90,11 @@ export function useChat(documentId: number) {
         eventSource.close();
         setIsStreaming(false);
         setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMsgId ? { ...msg, isStreaming: false } : msg
-          )
+          prev.map((msg) => (msg.id === assistantMsgId ? { ...msg, isStreaming: false } : msg)),
         );
       };
     },
-    [documentId, isStreaming, dispatch]
+    [documentId, isStreaming, dispatch],
   );
 
   return {

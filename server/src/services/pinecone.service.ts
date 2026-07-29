@@ -14,7 +14,7 @@ class PineconeService {
   async upsertChunks(
     documentId: number,
     chunks: Array<{ chunkIndex: number; text: string; embedding: number[] }>,
-    ownerId?: string
+    ownerId?: string,
   ): Promise<void> {
     logger.info({ documentId, chunkCount: chunks.length }, 'Upserting chunks to Pinecone');
 
@@ -44,7 +44,7 @@ class PineconeService {
     documentId: number,
     queryVector: number[],
     topK: number = 5,
-    ownerId?: string
+    ownerId?: string,
   ): Promise<Array<{ text: string; score: number }>> {
     const ns = ownerId ? this.index.namespace(ownerId) : this.index;
     const response = await ns.query({
@@ -57,7 +57,7 @@ class PineconeService {
     });
 
     return response.matches.map((match) => ({
-      text: match.metadata?.text as string || '',
+      text: (match.metadata?.text as string) || '',
       score: match.score || 0,
     }));
   }
@@ -66,7 +66,7 @@ class PineconeService {
     try {
       logger.info({ documentId }, 'Deleting document chunks from Pinecone');
       const ns = ownerId ? this.index.namespace(ownerId) : this.index;
-      
+
       // Fetch the actual index dimension to ensure our dummy vector matches perfectly
       const stats = await this.index.describeIndexStats();
       const dimension = stats.dimension || 768;
@@ -79,15 +79,21 @@ class PineconeService {
         includeMetadata: false,
       });
 
-      const idsToDelete = queryResponse.matches.map(m => m.id);
-      
+      const idsToDelete = queryResponse.matches.map((m) => m.id);
+
       if (idsToDelete.length > 0) {
         await ns.deleteMany({ ids: idsToDelete });
       }
-      
-      logger.info({ documentId, deletedCount: idsToDelete.length }, 'Successfully deleted document from Pinecone');
+
+      logger.info(
+        { documentId, deletedCount: idsToDelete.length },
+        'Successfully deleted document from Pinecone',
+      );
     } catch (error) {
-      logger.warn({ err: error, documentId }, 'Failed to delete chunks from Pinecone. They may need manual cleanup.');
+      logger.warn(
+        { err: error, documentId },
+        'Failed to delete chunks from Pinecone. They may need manual cleanup.',
+      );
     }
   }
 }
