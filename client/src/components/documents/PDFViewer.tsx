@@ -14,7 +14,7 @@ interface PDFViewerProps {
   documentId: number;
 }
 
-// Helper to check if a Blob is actually a valid PDF file (starts with %PDF-)
+// Helper to check if a Blob is a valid PDF file (starts with %PDF-)
 async function isValidPdfBlob(blob: Blob): Promise<boolean> {
   try {
     const headerBuffer = await blob.slice(0, 5).arrayBuffer();
@@ -41,29 +41,27 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
     const fetchPDFSource = async () => {
       setLoadingPdf(true);
 
-      // Priority 1: Fetch via backend stream proxy /api/documents/:id/file (bypasses B2 CORS and auth header issues)
+      // Priority 1: Load PDF directly from client device's IndexedDB (Instant, Offline-ready, 0 CORS)
       try {
-        const res = await fetch(`/api/documents/${documentId}/file`);
-        if (res.ok) {
-          const blob = await res.blob();
-          if (await isValidPdfBlob(blob)) {
-            if (isMounted) {
-              setPdfSource(blob);
-              setLoadingPdf(false);
-              return;
-            }
+        const localBlob = await loadPDF(documentId);
+        if (localBlob && (await isValidPdfBlob(localBlob))) {
+          if (isMounted) {
+            setPdfSource(localBlob);
+            setLoadingPdf(false);
+            return;
           }
         }
       } catch {
-        // Fallback to next source on fetch failure
+        // Fallback to server stream
       }
 
-      // Priority 2: Fetch direct Backblaze B2 Presigned URL if available
-      if (documentData?.fileUrl) {
-        try {
-          const b2Res = await fetch(documentData.fileUrl);
-          if (b2Res.ok) {
-            const blob = await b2Res.blob();
+      // Priority 2: Fetch via backend server stream proxy /api/documents/:id/file
+      try {
+        const res = await fetch(`/api/documents/${documentId}/file`);
+        if (res.ok) {
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/pdf')) {
+            const blob = await res.blob();
             if (await isValidPdfBlob(blob)) {
               if (isMounted) {
                 setPdfSource(blob);
@@ -72,19 +70,9 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
               }
             }
           }
-        } catch {
-          // Fallback to IndexedDB
         }
-      }
-
-      // Priority 3: Fallback to local IndexedDB cache
-      const localBlob = await loadPDF(documentId);
-      if (localBlob && (await isValidPdfBlob(localBlob))) {
-        if (isMounted) {
-          setPdfSource(localBlob);
-          setLoadingPdf(false);
-          return;
-        }
+      } catch {
+        // Fallback
       }
 
       if (isMounted) {
@@ -190,7 +178,7 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
       <div className="flex-1 overflow-auto bg-muted/20 relative flex justify-center p-4">
         {loadingPdf ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <span className="animate-pulse">Loading PDF from cloud storage...</span>
+            <span className="animate-pulse">Loading PDF document...</span>
           </div>
         ) : !pdfSource ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">

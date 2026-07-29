@@ -5,6 +5,10 @@ import { AppError } from '../middlewares/error-handler.js';
 import type { ApiResponse, DocumentDTO } from '../types/index.js';
 import { documentRepository } from '../repositories/document.repository.js';
 import { b2StorageService } from '../services/b2-storage.service.js';
+import fs from 'fs';
+import path from 'path';
+
+const UPLOAD_DIR = path.join(process.cwd(), 'uploads');
 
 export const uploadDocument = async (req: Request, res: Response<ApiResponse<DocumentDTO>>) => {
   if (!req.files || !req.files.file) {
@@ -59,20 +63,35 @@ export const proxyPdfFile = async (req: Request, res: Response) => {
   const id = parseInt((req.params.id as string) || '0', 10);
   if (isNaN(id)) throw new AppError('Invalid document ID', 400);
 
-  // Fetch document directly by ID to ensure PDF preview stream never fails on session/owner mismatch
   const doc = await documentRepository.findById(id);
-  if (!doc || !doc.storageKey) throw new AppError('Document file not found', 404);
+  if (!doc) throw new AppError('Document not found', 404);
 
-  const buffer = await b2StorageService.getPdfBuffer(doc.storageKey);
-  if (!buffer) throw new AppError('Failed to fetch PDF content from cloud storage', 500);
+  // 1. Priority 1: Serve directly from server disk (uploads/doc_${id}.pdf)
+  const localFilePath = path.join(UPLOAD_DIR, `doc_${id}.pdf`);
+  if (fs.existsSync(localFilePath)) {
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="${doc.fileName}"`,
+      'Cache-Control': 'public, max-age=3600',
+    });
+    return res.sendFile(localFilePath);
+  }
 
-  res.set({
-    'Content-Type': 'application/pdf',
-    'Content-Disposition': `inline; filename="${doc.fileName}"`,
-    'Content-Length': buffer.length.toString(),
-    'Cache-Control': 'public, max-age=3600',
-  });
-  res.send(buffer);
+  // 2. Priority 2: Serve from Backblaze B2 if storageKey is present
+  if (doc.storageKey) {
+    const buffer = await b2StorageService.getPdfBuffer(doc.storageKey);
+    if (buffer) {
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="${doc.fileName}"`,
+        'Content-Length': buffer.length.toString(),
+        'Cache-Control': 'public, max-age=3600',
+      });
+      return res.send(buffer);
+    }
+  }
+
+  throw new AppError('PDF file not available on server or cloud storage', 404);
 };
 
 export const deleteDocument = async (req: Request, res: Response<ApiResponse>) => {
