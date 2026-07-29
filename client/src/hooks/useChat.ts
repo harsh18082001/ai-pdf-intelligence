@@ -46,7 +46,8 @@ export function useChat(documentId: number) {
 
       const encodedMessage = encodeURIComponent(content);
       const baseUrl = import.meta.env.VITE_API_URL || '/api';
-      const eventSource = new EventSource(`${baseUrl}/documents/${documentId}/chat/stream?message=${encodedMessage}`);
+      const clientId = localStorage.getItem('dociq_client_id');
+      const eventSource = new EventSource(`${baseUrl}/documents/${documentId}/chat/stream?message=${encodedMessage}${clientId ? `&clientId=${clientId}` : ''}`);
 
       eventSource.onmessage = (event) => {
         const data = event.data;

@@ -8,7 +8,7 @@ import { logger } from '../utils/logger.js';
 import { DOCUMENT_STATUS } from '../config/constants.js';
 
 class ProcessingService {
-  async processDocument(documentId: number, fileBuffer: Buffer): Promise<void> {
+  async processDocument(documentId: number, fileBuffer: Buffer, clientId?: string): Promise<void> {
     try {
       // 1. Mark as processing
       await documentRepository.updateStatus(documentId, DOCUMENT_STATUS.PROCESSING);
@@ -57,7 +57,7 @@ class ProcessingService {
         text: chunk.text,
         embedding: embeddings[index]!
       }));
-      await pineconeService.upsertChunks(documentId, pineconeChunks);
+      await pineconeService.upsertChunks(documentId, pineconeChunks, clientId);
 
       // 8. Update document status
       await documentRepository.updateProcessingResult(documentId, {

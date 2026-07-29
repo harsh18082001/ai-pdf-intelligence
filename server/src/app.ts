@@ -1,34 +1,31 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import fileUpload from 'express-fileupload';
 import { env } from './config/env.js';
 import apiRoutes from './routes/index.js';
 import { errorHandler, notFoundHandler } from './middlewares/error-handler.js';
 import { generalLimiter } from './middlewares/rate-limiter.js';
 
 const app = express();
-
-// Trust Vercel's reverse proxy for accurate client IP in rate limiting
 app.set('trust proxy', 1);
 
-app.use(
-  cors({
-    origin: env.CORS_ORIGIN,
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: true,
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id']
+};
+app.use(cors(corsOptions));
+app.options('/{0,}', cors(corsOptions));
+
+app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(fileUpload({ limits: { fileSize: (env.MAX_FILE_SIZE_MB || 50) * 1024 * 1024 }, abortOnLimit: true, useTempFiles: false }));
 
-// Apply rate limiting to all requests
 app.use(generalLimiter);
-
-// API Routes
 app.use('/api', apiRoutes);
-
-// 404 Handler
 app.use(notFoundHandler);
-
-// Global Error Handler
 app.use(errorHandler);
 
 export default app;

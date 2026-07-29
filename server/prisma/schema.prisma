@@ -15,6 +15,7 @@ model Document {
   pageCount Int      @default(0)
   status    String   @default("pending") // pending, processing, completed, failed, ocr_required
   errorMsg  String?
+  clientId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -22,6 +23,7 @@ model Document {
   messages  Message[]
   artifacts AIArtifact[]
 
+  @@index([clientId])
   @@map("documents")
 }
 

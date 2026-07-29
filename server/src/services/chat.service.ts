@@ -8,9 +8,9 @@ import { TOP_K_CHUNKS, DOCUMENT_STATUS, MESSAGE_ROLES } from '../config/constant
 import type { MessageDTO, StreamCallback } from '../types/index.js';
 
 class ChatService {
-  private async prepareChat(documentId: number, userMessage: string) {
+  private async prepareChat(documentId: number, userMessage: string, clientId?: string) {
     const doc = await documentRepository.findById(documentId);
-    if (!doc) throw new AppError('Document not found', 404);
+    if (!doc || (clientId && doc.clientId !== clientId)) throw new AppError('Document not found', 404);
     if (doc.status !== DOCUMENT_STATUS.COMPLETED) {
       throw new AppError('Document is not ready for chat. Current status: ' + doc.status, 400);
     }
@@ -26,7 +26,7 @@ class ChatService {
     const queryEmbedding = await aiService.generateEmbedding(userMessage);
 
     // Retrieve chunks from Pinecone
-    const topChunks = await pineconeService.querySimilar(documentId, queryEmbedding, TOP_K_CHUNKS);
+    const topChunks = await pineconeService.querySimilar(documentId, queryEmbedding, TOP_K_CHUNKS, clientId);
     if (topChunks.length === 0) {
       throw new AppError('No document content available for context', 400);
     }
@@ -50,8 +50,8 @@ class ChatService {
     return { messages };
   }
 
-  async sendMessage(documentId: number, userMessage: string): Promise<string> {
-    const { messages } = await this.prepareChat(documentId, userMessage);
+  async sendMessage(documentId: number, userMessage: string, clientId?: string): Promise<string> {
+    const { messages } = await this.prepareChat(documentId, userMessage, clientId);
 
     // Call AI
     const assistantResponse = await aiService.chatCompletion({ messages });
@@ -69,9 +69,10 @@ class ChatService {
   async streamMessage(
     documentId: number,
     userMessage: string,
-    onChunk: StreamCallback
+    onChunk: StreamCallback,
+    clientId?: string
   ): Promise<string> {
-    const { messages } = await this.prepareChat(documentId, userMessage);
+    const { messages } = await this.prepareChat(documentId, userMessage, clientId);
 
     const stream = aiService.chatCompletionStream({ messages });
     

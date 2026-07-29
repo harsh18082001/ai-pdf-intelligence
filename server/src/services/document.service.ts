@@ -23,50 +23,51 @@ function toDTO(doc: Document): DocumentDTO {
 }
 
 class DocumentService {
-  async upload(file: UploadedFile): Promise<DocumentDTO> {
+  async upload(file: UploadedFile, clientId?: string): Promise<DocumentDTO> {
     const doc = await documentRepository.create({
       title: file.name,
       fileName: file.name,
       fileSize: file.size,
+      clientId: clientId,
     });
 
     // Wait for processing to complete synchronously so Vercel Serverless doesn't kill it
-    await processDocumentAsync(doc.id, file.data);
+    await processDocumentAsync(doc.id, file.data, clientId);
 
     // Fetch the updated document with its new status
     const updatedDoc = await documentRepository.findById(doc.id);
     return toDTO(updatedDoc || doc);
   }
 
-  async list(): Promise<DocumentDTO[]> {
-    const docs = await documentRepository.findAll();
+  async list(clientId?: string): Promise<DocumentDTO[]> {
+    const docs = await documentRepository.findAll(clientId);
     return docs.map(toDTO);
   }
 
-  async getById(id: number): Promise<DocumentDTO> {
+  async getById(id: number, clientId?: string): Promise<DocumentDTO> {
     const doc = await documentRepository.findById(id);
-    if (!doc) {
+    if (!doc || (clientId && doc.clientId !== clientId)) {
       throw new AppError('Document not found', 404);
     }
     return toDTO(doc);
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: number, clientId?: string): Promise<void> {
     const doc = await documentRepository.findById(id);
-    if (!doc) {
+    if (!doc || (clientId && doc.clientId !== clientId)) {
       throw new AppError('Document not found', 404);
     }
 
     // Delete vectors from Pinecone
-    await pineconeService.deleteByDocumentId(id);
+    await pineconeService.deleteByDocumentId(id, clientId);
 
     // Prisma's onDelete: Cascade will handle chunks, messages, and artifacts
     await documentRepository.delete(id);
   }
 
-  async getProcessingStatus(id: number): Promise<{ status: string; errorMsg?: string }> {
+  async getProcessingStatus(id: number, clientId?: string): Promise<{ status: string; errorMsg?: string }> {
     const doc = await documentRepository.findById(id);
-    if (!doc) {
+    if (!doc || (clientId && doc.clientId !== clientId)) {
       throw new AppError('Document not found', 404);
     }
     return {

@@ -4,15 +4,21 @@ import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { store } from './store/store';
 import { ThemeProvider } from './components/theme-provider';
+import { AuthProvider, getStoredClientId } from './context/AuthContext';
 import App from './App';
 import './index.css';
+
+// Initialize clientId in localStorage before any API calls
+getStoredClientId();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Provider store={store}>
       <BrowserRouter>
         <ThemeProvider defaultTheme="system" storageKey="dociq-theme">
-          <App />
+          <AuthProvider>
+            <App />
+          </AuthProvider>
         </ThemeProvider>
       </BrowserRouter>
     </Provider>

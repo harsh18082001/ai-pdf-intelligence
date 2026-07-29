@@ -7,6 +7,7 @@ export class DocumentRepository {
     title: string;
     fileName: string;
     fileSize: number;
+    clientId?: string;
   }): Promise<Document> {
     return prisma.document.create({
       data: {
@@ -16,8 +17,9 @@ export class DocumentRepository {
     });
   }
 
-  async findAll(): Promise<Document[]> {
+  async findAll(clientId?: string): Promise<Document[]> {
     return prisma.document.findMany({
+      where: clientId ? { clientId } : undefined,
       orderBy: {
         createdAt: 'desc',
       },
