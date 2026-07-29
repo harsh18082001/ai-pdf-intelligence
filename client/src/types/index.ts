@@ -6,9 +6,6 @@ export interface DocumentDTO {
   pageCount: number;
   status: string;
   errorMsg?: string;
-  fileUrl?: string;
-  userId?: string | null;
-  sessionId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

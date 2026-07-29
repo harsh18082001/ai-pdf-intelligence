@@ -1,4 +1,4 @@
-import { Moon, Sun, FileText, ShieldCheck } from 'lucide-react';
+import { Moon, Sun, FileText } from 'lucide-react';
 import { useTheme } from '@/components/theme-provider';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,14 +19,7 @@ export function Header() {
           <FileText className="h-6 w-6 text-primary" />
           <span className="text-xl font-bold tracking-tight">DocIQ</span>
         </Link>
-        <div className="flex items-center gap-3">
-          {/* Private Session Indicator */}
-          <span className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-500/20">
-            <ShieldCheck className="h-4 w-4" />
-            Private Session
-          </span>
-
-          {/* Theme Switcher */}
+        <div className="flex items-center gap-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">

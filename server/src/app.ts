@@ -10,19 +10,12 @@ const app = express();
 // Trust Vercel's reverse proxy for accurate client IP in rate limiting
 app.set('trust proxy', 1);
 
-// CORS — must be the VERY FIRST middleware before anything else
-const corsOptions: cors.CorsOptions = {
-  origin: true, // Reflect the request origin — simplest, most reliable for Vercel
-  credentials: true,
-  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-session-id', 'X-Requested-With'],
-};
-
-app.use(cors(corsOptions));
-
-// Explicitly handle OPTIONS preflight for ALL routes (Express 5 syntax)
-app.options('/{0,}', cors(corsOptions));
-
+app.use(
+  cors({
+    origin: env.CORS_ORIGIN,
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

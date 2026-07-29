@@ -11,14 +11,6 @@ export interface PaginationParams {
   limit: number;
 }
 
-export interface RequestOwner {
-  type: 'user' | 'guest';
-  id: string; // userId (google sub) or guest sessionId
-  email?: string;
-  name?: string;
-  picture?: string;
-}
-
 export interface DocumentDTO {
   id: number;
   title: string;
@@ -26,9 +18,6 @@ export interface DocumentDTO {
   fileSize: number;
   pageCount: number;
   status: string;
-  fileUrl?: string;
-  userId?: string | null;
-  sessionId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

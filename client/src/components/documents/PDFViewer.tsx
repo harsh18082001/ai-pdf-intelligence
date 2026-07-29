@@ -3,92 +3,35 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useGetDocumentQuery } from '@/api/documentApi';
 import { loadPDF } from '@/services/pdfStorage';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
+// Configure the worker for react-pdf
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface PDFViewerProps {
   documentId: number;
 }
 
-// Helper to check if a Blob is a valid PDF file (starts with %PDF-)
-async function isValidPdfBlob(blob: Blob): Promise<boolean> {
-  try {
-    const headerBuffer = await blob.slice(0, 5).arrayBuffer();
-    const headerText = new TextDecoder().decode(headerBuffer);
-    return headerText === '%PDF-';
-  } catch {
-    return false;
-  }
-}
-
 export function PDFViewer({ documentId }: PDFViewerProps) {
-  const { data: documentData } = useGetDocumentQuery(documentId, { skip: !documentId });
   const [numPages, setNumPages] = useState<number>(0);
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [pageInput, setPageInput] = useState<string>('1');
   const [isMaximized, setIsMaximized] = useState(false);
-  const [pdfSource, setPdfSource] = useState<Blob | null>(null);
-  const [loadingPdf, setLoadingPdf] = useState(true);
+  const [pdfFile, setPdfFile] = useState<Blob | null>(null);
+  const [loadingLocal, setLoadingLocal] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchPDFSource = async () => {
-      setLoadingPdf(true);
-
-      // Priority 1: Load PDF directly from client device's IndexedDB (Instant, Offline-ready, 0 CORS)
-      try {
-        const localBlob = await loadPDF(documentId);
-        if (localBlob && (await isValidPdfBlob(localBlob))) {
-          if (isMounted) {
-            setPdfSource(localBlob);
-            setLoadingPdf(false);
-            return;
-          }
-        }
-      } catch {
-        // Fallback to server stream
-      }
-
-      // Priority 2: Fetch via backend server stream proxy /api/documents/:id/file
-      try {
-        const res = await fetch(`/api/documents/${documentId}/file`);
-        if (res.ok) {
-          const contentType = res.headers.get('content-type') || '';
-          if (contentType.includes('application/pdf')) {
-            const blob = await res.blob();
-            if (await isValidPdfBlob(blob)) {
-              if (isMounted) {
-                setPdfSource(blob);
-                setLoadingPdf(false);
-                return;
-              }
-            }
-          }
-        }
-      } catch {
-        // Fallback
-      }
-
-      if (isMounted) {
-        setPdfSource(null);
-        setLoadingPdf(false);
-      }
+    const fetchLocalPDF = async () => {
+      setLoadingLocal(true);
+      const file = await loadPDF(documentId);
+      setPdfFile(file);
+      setLoadingLocal(false);
     };
-
-    if (documentId) {
-      fetchPDFSource();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [documentId, documentData]);
+    fetchLocalPDF();
+  }, [documentId]);
 
   function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
     setNumPages(numPages);
@@ -125,7 +68,7 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
       if (!isNaN(parsed) && parsed >= 1 && parsed <= numPages) {
         setPageNumber(parsed);
       } else {
-        setPageInput(String(pageNumber));
+        setPageInput(String(pageNumber)); // Revert if invalid
       }
     }
   };
@@ -176,18 +119,18 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
 
       {/* PDF Document Container */}
       <div className="flex-1 overflow-auto bg-muted/20 relative flex justify-center p-4">
-        {loadingPdf ? (
+        {loadingLocal ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <span className="animate-pulse">Loading PDF document...</span>
+            <span className="animate-pulse">Loading local PDF...</span>
           </div>
-        ) : !pdfSource ? (
+        ) : !pdfFile ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <p>PDF file not available.</p>
-            <p className="text-xs text-muted-foreground mt-1">Please re-upload this document.</p>
+            <p>PDF not available locally.</p>
+            <p className="text-sm">Please re-upload this document to view it in the browser.</p>
           </div>
         ) : (
           <Document
-            file={pdfSource}
+            file={pdfFile}
             onLoadSuccess={onDocumentLoadSuccess}
             loading={
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -201,14 +144,14 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
             }
             className="flex flex-col items-center shadow-lg"
           >
-            <Page
-              pageNumber={pageNumber}
-              scale={scale}
-              renderTextLayer={true}
-              renderAnnotationLayer={true}
-              className="bg-white"
-            />
-          </Document>
+          <Page
+            pageNumber={pageNumber}
+            scale={scale}
+            renderTextLayer={true}
+            renderAnnotationLayer={true}
+            className="bg-white"
+          />
+        </Document>
         )}
       </div>
     </div>

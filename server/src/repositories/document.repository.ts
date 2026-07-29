@@ -1,61 +1,32 @@
 import { prisma } from '../db.js';
 import type { Document } from '@prisma/client';
 import { DOCUMENT_STATUS } from '../config/constants.js';
-import type { RequestOwner } from '../types/index.js';
 
 export class DocumentRepository {
   async create(data: {
     title: string;
     fileName: string;
     fileSize: number;
-    storageKey?: string;
-    owner?: RequestOwner;
   }): Promise<Document> {
     return prisma.document.create({
       data: {
-        title: data.title,
-        fileName: data.fileName,
-        fileSize: data.fileSize,
-        storageKey: data.storageKey || null,
-        userId: data.owner?.type === 'user' ? data.owner.id : null,
-        sessionId: data.owner?.type === 'guest' ? data.owner.id : null,
+        ...data,
         status: DOCUMENT_STATUS.PENDING,
       },
     });
   }
 
-  async findAll(owner?: RequestOwner): Promise<Document[]> {
-    if (!owner) {
-      return prisma.document.findMany({
-        orderBy: { createdAt: 'desc' },
-      });
-    }
-
+  async findAll(): Promise<Document[]> {
     return prisma.document.findMany({
-      where: owner.type === 'user' ? { userId: owner.id } : { sessionId: owner.id },
-      orderBy: { createdAt: 'desc' },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
   }
 
-  async findById(id: number, owner?: RequestOwner): Promise<Document | null> {
-    const doc = await prisma.document.findUnique({
+  async findById(id: number): Promise<Document | null> {
+    return prisma.document.findUnique({
       where: { id },
-    });
-
-    if (!doc) return null;
-
-    if (owner) {
-      if (owner.type === 'user' && doc.userId && doc.userId !== owner.id) return null;
-      if (owner.type === 'guest' && doc.sessionId && doc.sessionId !== owner.id && doc.userId !== null) return null;
-    }
-
-    return doc;
-  }
-
-  async updateStorageKey(id: number, storageKey: string): Promise<Document> {
-    return prisma.document.update({
-      where: { id },
-      data: { storageKey },
     });
   }
 
@@ -87,22 +58,6 @@ export class DocumentRepository {
     return prisma.document.delete({
       where: { id },
     });
-  }
-
-  async migrateGuestDocuments(guestSessionId: string, userId: string): Promise<number> {
-    const result = await prisma.document.updateMany({
-      where: {
-        OR: [
-          { sessionId: guestSessionId },
-          { userId: null, sessionId: { startsWith: 'guest_' } }
-        ]
-      },
-      data: {
-        userId: userId,
-        sessionId: null,
-      },
-    });
-    return result.count;
   }
 }
 

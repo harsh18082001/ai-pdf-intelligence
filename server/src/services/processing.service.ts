@@ -8,8 +8,9 @@ import { logger } from '../utils/logger.js';
 import { DOCUMENT_STATUS } from '../config/constants.js';
 
 class ProcessingService {
-  async processDocument(documentId: number, fileBuffer: Buffer, ownerId?: string): Promise<void> {
+  async processDocument(documentId: number, fileBuffer: Buffer): Promise<void> {
     try {
+      // 1. Mark as processing
       await documentRepository.updateStatus(documentId, DOCUMENT_STATUS.PROCESSING);
 
       const doc = await documentRepository.findById(documentId);
@@ -17,11 +18,13 @@ class ProcessingService {
         throw new Error(`Document ${documentId} not found`);
       }
 
-      logger.info({ documentId, ownerId }, 'Starting document processing');
+      logger.info({ documentId }, 'Starting document processing');
 
+      // 2. Read file and extract text
       const pdf = await getDocumentProxy(new Uint8Array(fileBuffer));
       const { text, totalPages } = await extractText(pdf, { mergePages: true });
 
+      // 3. OCR check
       if (!text || text.trim().length < 50) {
         const ocrMsg = 'This PDF appears to contain scanned pages. OCR support is planned for a future release.';
         await documentRepository.updateStatus(documentId, DOCUMENT_STATUS.OCR_REQUIRED, ocrMsg);
@@ -29,27 +32,34 @@ class ProcessingService {
         return;
       }
 
+      // 4. Chunk text
       const chunks = chunkText(text);
       logger.info({ documentId, chunksCount: chunks.length }, 'Text chunked');
 
+      // 5. Generate embeddings in batches to avoid overwhelming the API
+      // Wait, we can generate all at once or in batches depending on chunk count.
+      // Let's pass all texts to generateEmbeddings. The provider handles it.
       const texts = chunks.map((c) => c.text);
       const embeddings = await aiService.generateEmbeddings(texts);
 
+      // 6. Prepare chunks for DB (no embeddings here)
       const dbChunks = chunks.map((chunk) => ({
         chunkIndex: chunk.index,
         text: chunk.text,
         tokenCount: chunk.tokenCount,
       }));
 
+      // 7. Save to SQLite and Pinecone
       await chunkRepository.createMany(documentId, dbChunks);
-
+      
       const pineconeChunks = chunks.map((chunk, index) => ({
         chunkIndex: chunk.index,
         text: chunk.text,
-        embedding: embeddings[index]!,
+        embedding: embeddings[index]!
       }));
-      await pineconeService.upsertChunks(documentId, pineconeChunks, ownerId);
+      await pineconeService.upsertChunks(documentId, pineconeChunks);
 
+      // 8. Update document status
       await documentRepository.updateProcessingResult(documentId, {
         pageCount: totalPages,
         status: DOCUMENT_STATUS.COMPLETED,

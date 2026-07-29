@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { chatService } from '../services/chat.service.js';
 import { AppError } from '../middlewares/error-handler.js';
 import type { ApiResponse, MessageDTO } from '../types/index.js';
@@ -10,7 +10,7 @@ export const sendMessage = async (req: Request, res: Response<ApiResponse<{ mess
 
   const { message } = req.body;
   
-  const response = await chatService.sendMessage(documentId, message, req.owner);
+  const response = await chatService.sendMessage(documentId, message);
 
   res.status(200).json({
     success: true,
@@ -31,6 +31,7 @@ export const streamMessage = async (req: Request, res: Response) => {
     return;
   }
 
+  // Set headers for Server-Sent Events
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',
@@ -42,7 +43,7 @@ export const streamMessage = async (req: Request, res: Response) => {
   try {
     await chatService.streamMessage(documentId, message, (chunk) => {
       res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-    }, req.owner);
+    });
 
     res.write('data: [DONE]\n\n');
     res.end();
@@ -57,7 +58,7 @@ export const getChatHistory = async (req: Request, res: Response<ApiResponse<Mes
   const documentId = parseInt((req.params.documentId as string) || '0', 10);
   if (isNaN(documentId)) throw new AppError('Invalid document ID', 400);
 
-  const history = await chatService.getHistory(documentId, req.owner);
+  const history = await chatService.getHistory(documentId);
 
   res.status(200).json({
     success: true,

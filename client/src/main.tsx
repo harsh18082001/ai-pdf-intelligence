@@ -4,20 +4,17 @@ import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { store } from './store/store';
 import { ThemeProvider } from './components/theme-provider';
-import { AuthProvider } from './context/AuthContext';
 import App from './App';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Provider store={store}>
-      <AuthProvider>
-        <BrowserRouter>
-          <ThemeProvider defaultTheme="system" storageKey="dociq-theme">
-            <App />
-          </ThemeProvider>
-        </BrowserRouter>
-      </AuthProvider>
+      <BrowserRouter>
+        <ThemeProvider defaultTheme="system" storageKey="dociq-theme">
+          <App />
+        </ThemeProvider>
+      </BrowserRouter>
     </Provider>
   </StrictMode>
 );
