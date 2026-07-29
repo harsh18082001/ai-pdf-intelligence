@@ -1,40 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { openDB } from 'idb';
 
-const DB_NAME = 'dociq_user_db';
-const STORE_NAME = 'user_config';
+const STORAGE_KEY = 'dociq_client_id';
 
-async function initUserDB() {
-  return openDB(DB_NAME, 1, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-    },
-  });
-}
-
-export async function getStoredClientId(): Promise<string> {
-  try {
-    const db = await initUserDB();
-    let clientId = await db.get(STORE_NAME, 'clientId');
-    if (!clientId) {
-      clientId = localStorage.getItem('dociq_client_id');
-    }
-    if (!clientId) {
-      clientId = 'usr_' + crypto.randomUUID();
-    }
-    await db.put(STORE_NAME, clientId, 'clientId');
-    localStorage.setItem('dociq_client_id', clientId);
-    return clientId;
-  } catch {
-    let clientId = localStorage.getItem('dociq_client_id');
-    if (!clientId) {
-      clientId = 'usr_' + crypto.randomUUID();
-      localStorage.setItem('dociq_client_id', clientId);
-    }
-    return clientId;
+export function getStoredClientId(): string {
+  let clientId = localStorage.getItem(STORAGE_KEY);
+  if (!clientId || clientId.trim().length === 0) {
+    clientId = 'usr_' + crypto.randomUUID();
+    localStorage.setItem(STORAGE_KEY, clientId);
   }
+  return clientId;
 }
 
 interface AuthContextType {
@@ -44,10 +18,11 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [clientId, setClientId] = useState<string>('');
+  const [clientId, setClientId] = useState<string>(() => getStoredClientId());
 
   useEffect(() => {
-    getStoredClientId().then((id) => setClientId(id));
+    const id = getStoredClientId();
+    setClientId(id);
   }, []);
 
   return (

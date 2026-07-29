@@ -14,7 +14,6 @@ export function DocumentPage() {
 
   const { data: document, isError } = useGetDocumentQuery(documentId, {
     skip: !documentId,
-    pollingInterval: 3000,
   });
 
   if (!documentId || isError) {

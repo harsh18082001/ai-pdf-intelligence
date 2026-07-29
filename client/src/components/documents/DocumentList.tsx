@@ -4,9 +4,7 @@ import { FileText, Loader2 } from 'lucide-react';
 import { UploadModal } from './UploadModal';
 
 export function DocumentList() {
-  const { data: documents = [], isLoading, error } = useGetDocumentsQuery(undefined, {
-    pollingInterval: 3000, // Poll every 3s to update status when processing
-  });
+  const { data: documents = [], isLoading, error } = useGetDocumentsQuery();
 
   if (isLoading) {
     return (
