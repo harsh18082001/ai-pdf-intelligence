@@ -21,7 +21,7 @@ model AIArtifact {
 }
 ```
 - Table: `ai_artifacts`. **Unique constraint on `(documentId, type)`** — at most one artifact of each type per document; this is what makes [[ai-artifact.repository]]`.upsert()` an actual upsert (find-then-create-or-update).
-- `type` is free-form `String`; allowed values enforced at the request-validation layer via `ARTIFACT_TYPES` in `config/constants.ts`: `summary | key_points | insights | flashcards | quiz | interview_questions | resume_analysis`. Only `summary`/`key_points`/`insights` have actual prompt-builder implementations in [[templates|ai/prompts/templates.ts]] and UI buttons in [[MetadataPanel]] — the rest are schema-valid but functionally a no-op fallback (see [[command.service]] Notes).
+- `type` is free-form `String`; allowed values enforced at the request-validation layer via `ARTIFACT_TYPES` in `config/constants.ts`: `summary | key_points | insights | flashcards | quiz | interview_questions | resume_analysis`. Only `summary`/`key_points`/`insights` have actual prompt-builder implementations in [[templates|ai/prompts/templates.ts]] and UI buttons in [[DocumentHeader]]'s Actions dropdown — the rest are schema-valid but functionally a no-op fallback (see [[command.service]] Notes).
 
 ## Source
 `server/prisma/schema.prisma` (AIArtifact model)

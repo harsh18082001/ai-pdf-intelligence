@@ -39,7 +39,7 @@ export function ChatInput({ onSendMessage, disabled, isStreaming }: ChatInputPro
 
   return (
     <form onSubmit={handleSubmit} className="p-4 border-t bg-background">
-      <div className="relative flex items-end gap-2 bg-muted/50 p-2 rounded-xl border focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all">
+      <div className="relative flex items-end gap-2 bg-muted/50 p-2 rounded-xl border focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all duration-(--duration-standard)">
         <Textarea
           ref={textareaRef}
           value={input}

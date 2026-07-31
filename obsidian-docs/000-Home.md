@@ -5,7 +5,7 @@ tags: [home]
 Master index for the DocIQ (`ai-pdf-intelligence`) codebase vault — an AI-PDF RAG platform. Start here.
 
 ## Tech Stack
-**Frontend** (`client/`): React 19, Vite, TypeScript, Redux Toolkit + RTK Query, react-router-dom v7, Supabase JS client (installed, **unused** — see [[lib-supabase]]), react-pdf, Tailwind v4, shadcn/radix-ui, `idb` (IndexedDB), react-markdown.
+**Frontend** (`client/`): React 19, Vite, TypeScript, Redux Toolkit + RTK Query, react-router-dom v7, Supabase JS client (installed, **unused** — see [[lib-supabase]]), react-pdf, Tailwind v4, shadcn/radix-ui, `idb` (IndexedDB), react-markdown, self-hosted variable fonts (`@fontsource-variable/inter` + `@fontsource-variable/fraunces`), `framer-motion` (route/UI motion), `cmdk` (command palette), `react-resizable-panels` (pinned to v2 — see [[Dependencies]]), `tw-animate-css` (backs the dialog/menu animate-in/out classes) — see [[Frontend-Architecture#Design system — "Glacier" (`index.css`)]] and [[Frontend-Architecture#App shell — sidebar navigation, not a top header (redesign pass)]].
 
 **Backend** (`server/`): Express 5, Prisma ORM → PostgreSQL (Supabase-hosted), Google Gemini (`@google/generative-ai`) for LLM inference, Pinecone (vector DB) for embeddings/retrieval, `unpdf` for PDF text extraction, zod for validation, pino for logging, express-fileupload, helmet, express-rate-limit.
 
@@ -18,13 +18,14 @@ ai-pdf-intelligence/
 │   ├── api/            → baseApi, chatApi, commandApi, documentApi
 │   ├── components/
 │   │   ├── chat/       → ChatInput, ChatInterface, ChatMessage
-│   │   ├── documents/  → DocumentCard, DocumentList, MetadataPanel, PDFViewer, UploadDropzone, UploadModal
-│   │   ├── layout/     → Header, Layout
+│   │   ├── documents/  → DocumentCard, DocumentHeader, DocumentList, DocumentStatusBadge, DocumentToolbar, PDFViewer, UploadDropzone, UploadModal (MetadataPanel retired/deleted)
+│   │   ├── layout/     → AppSidebar, TopBar, MobileSidebarSheet, PageTransition, Layout (Header, PageHeader retired/deleted)
+│   │   ├── command-palette.tsx
 │   │   ├── theme-provider.tsx
-│   │   └── ui/         → shadcn/ui primitives (not individually documented, see Frontend-Architecture)
+│   │   └── ui/         → shadcn/ui primitives (not individually documented, except EmptyState — see Frontend-Architecture)
 │   ├── context/        → AuthContext
-│   ├── hooks/          → useChat
-│   ├── lib/            → supabase (unused), user (unused), utils
+│   ├── hooks/          → useChat, useMediaQuery, useRecentDocuments
+│   ├── lib/            → supabase (unused), user (unused), utils, document-status, recent-documents
 │   ├── pages/          → HomePage, DocumentPage
 │   ├── services/       → pdfStorage
 │   ├── store/          → store, hooks
@@ -48,8 +49,9 @@ ai-pdf-intelligence/
 
 - **A chat bug** → [[useChat]] → [[ChatInterface]] → [[chat.controller]] → [[chat.service]] → [[templates]] → [[Data-Flow#2. Chat message flow]]
 - **An upload/processing bug** → [[UploadModal]] → [[document.controller]] → [[document.service]] → [[processor]] → [[processing.service]] → [[Data-Flow#1. Upload flow]]
-- **A "summary/insights/key points" bug** → [[MetadataPanel]] → [[command.controller]] → [[command.service]] → [[templates]] → [[Data-Flow#5. Command flow]]
+- **A "summary/insights/key points" bug** → [[DocumentHeader]] (Actions dropdown) → [[command.controller]] → [[command.service]] → [[templates]] → [[Data-Flow#5. Command flow]]
 - **A document list/view bug** → [[DocumentList]] / [[DocumentPage]] → [[documentApi]] → [[document.routes]] → [[document.repository]] → [[Model-Document]]
+- **A navigation/sidebar/filter bug** → [[AppSidebar]] (status nav + counts + recent) → [[HomePage]] (URL-synced filter state) → [[DocumentToolbar]] / [[command-palette]]
 - **A PDF preview/rendering bug** → [[PDFViewer]] → [[pdfStorage]] (client-only, no server endpoint — see [[Known-Issues-and-Conventions]])
 - **An auth/identity question** → [[AuthContext]] → [[baseApi]] → backend `getClientId()` in [[document.controller]]/[[chat.controller]] → [[Data-Flow#4. Auth / identity flow]] (and read [[Known-Issues-and-Conventions]] before assuming Supabase auth exists)
 - **Adding a new API endpoint** → [[API-Contract]] for the existing contract shape, then the matching `*.routes.md`/`*.controller.md`/`*.service.md` trio
@@ -81,14 +83,24 @@ ai-pdf-intelligence/
 - [[ChatInterface]]
 - [[ChatMessage]]
 - [[DocumentCard]]
+- [[DocumentHeader]]
 - [[DocumentList]]
-- [[MetadataPanel]]
+- [[DocumentStatusBadge]]
+- [[DocumentToolbar]]
+- [[EmptyState]]
 - [[PDFViewer]]
 - [[UploadDropzone]]
 - [[UploadModal]]
-- [[Header]]
+- [[AppSidebar]]
+- [[TopBar]]
+- [[MobileSidebarSheet]]
+- [[PageTransition]]
+- [[command-palette]]
 - [[Layout]]
 - [[theme-provider]]
+- [[Header]] (retired)
+- [[PageHeader]] (retired)
+- [[MetadataPanel]] (retired)
 
 ### Frontend — hooks, API services, context/lib/services/store
 - [[useChat]]
@@ -99,6 +111,10 @@ ai-pdf-intelligence/
 - [[AuthContext]]
 - [[lib-supabase]]
 - [[lib-user]]
+- [[document-status]]
+- [[recent-documents]]
+- [[useMediaQuery]]
+- [[useRecentDocuments]]
 - [[pdfStorage]]
 
 ### Backend architecture

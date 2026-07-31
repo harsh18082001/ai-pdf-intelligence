@@ -1,8 +1,18 @@
 import { useState } from 'react';
-import { FileText, Trash2, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { FileText, Trash2, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { DocumentStatusBadge } from './DocumentStatusBadge';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { getDocumentStatusConfig } from '@/lib/document-status';
+
+const ICON_TONE_CLASSES: Record<string, string> = {
+  success: 'bg-success/10 text-success',
+  info: 'bg-info/10 text-info',
+  warning: 'bg-warning/10 text-warning',
+  danger: 'bg-destructive/10 text-destructive',
+  neutral: 'bg-muted text-muted-foreground',
+};
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +36,7 @@ interface DocumentCardProps {
 export function DocumentCard({ document }: DocumentCardProps) {
   const [deleteDocument, { isLoading: isDeleting }] = useDeleteDocumentMutation();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { tone } = getDocumentStatusConfig(document.status);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -44,51 +55,16 @@ export function DocumentCard({ document }: DocumentCardProps) {
     setShowDeleteDialog(false);
   };
 
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return {
-          color: 'bg-green-500/15 text-green-700 dark:text-green-400',
-          icon: CheckCircle2,
-          label: 'Ready',
-        };
-      case 'processing':
-        return {
-          color: 'bg-blue-500/15 text-blue-700 dark:text-blue-400',
-          icon: Loader2,
-          label: 'Processing',
-        };
-      case 'failed':
-        return { color: 'bg-destructive/15 text-destructive', icon: AlertCircle, label: 'Failed' };
-      case 'ocr_required':
-        return {
-          color: 'bg-orange-500/15 text-orange-700 dark:text-orange-400',
-          icon: AlertCircle,
-          label: 'Needs OCR',
-        };
-      default:
-        return { color: 'bg-muted text-muted-foreground', icon: Clock, label: 'Pending' };
-    }
-  };
-
-  const statusConfig = getStatusConfig(document.status);
-  const StatusIcon = statusConfig.icon;
-
   return (
     <>
       <Link to={`/documents/${document.id}`}>
-        <Card className="h-full hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group flex flex-col cursor-pointer border-muted-foreground/20 glass relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+        <Card className="h-full hover:shadow-md hover:-translate-y-0.5 transition-all duration-(--duration-standard) group flex flex-col cursor-pointer relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-(--duration-standard) pointer-events-none" />
           <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0 relative z-10">
-            <div className="p-2 bg-primary/10 rounded-lg shrink-0">
-              <FileText className="h-6 w-6 text-primary" />
+            <div className={cn('p-2 rounded-md shrink-0', ICON_TONE_CLASSES[tone])}>
+              <FileText className="h-6 w-6" />
             </div>
-            <Badge variant="outline" className={`ml-2 border-transparent ${statusConfig.color}`}>
-              <StatusIcon
-                className={`mr-1 h-3 w-3 ${statusConfig.icon === Loader2 ? 'animate-spin' : ''}`}
-              />
-              {statusConfig.label}
-            </Badge>
+            <DocumentStatusBadge status={document.status} className="ml-2" />
           </CardHeader>
           <CardContent className="p-4 pt-2 flex-1">
             <h3

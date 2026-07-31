@@ -17,7 +17,7 @@ export function cn(...inputs: ClassValue[]) {
 
 ## Dependencies
 - Imports: `clsx`, `tailwind-merge`.
-- Used by: nearly every component with conditional styling — [[ChatInput]], [[ChatInterface]], [[ChatMessage]], [[DocumentCard]], [[MetadataPanel]], [[UploadDropzone]], etc.
+- Used by: nearly every component with conditional styling — [[ChatInput]], [[ChatInterface]], [[ChatMessage]], [[DocumentCard]], [[DocumentHeader]], [[UploadDropzone]], etc.
 
 ## Related
 - [[Frontend-Architecture]]

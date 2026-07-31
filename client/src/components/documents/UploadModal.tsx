@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { UploadCloud } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,9 +15,32 @@ import { useUploadDocumentMutation } from '@/api/documentApi';
 import { savePDF } from '@/services/pdfStorage';
 import { toast } from 'sonner';
 
-export function UploadModal() {
+interface UploadModalProps {
+  /** Custom trigger element (e.g. a sidebar button). Defaults to the standard CTA button. */
+  trigger?: ReactNode;
+  /** Opt in to auto-opening from a `?upload=1` URL param (used by the command palette). Only one instance per page should set this. */
+  autoOpenFromUrl?: boolean;
+}
+
+export function UploadModal({ trigger, autoOpenFromUrl }: UploadModalProps) {
   const [open, setOpen] = useState(false);
   const [uploadDocument, { isLoading }] = useUploadDocumentMutation();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (!autoOpenFromUrl) return;
+    if (searchParams.get('upload') === '1') {
+      setOpen(true);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('upload');
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [autoOpenFromUrl, searchParams, setSearchParams]);
 
   const handleUpload = async (file: File) => {
     try {
@@ -32,9 +57,15 @@ export function UploadModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 text-white shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all duration-300 rounded-full px-6 py-5 text-sm font-semibold">
-          Upload Document
-        </Button>
+        {trigger ?? (
+          <Button
+            size="lg"
+            className="gap-2 shadow-sm hover:shadow-md transition-shadow duration-(--duration-standard)"
+          >
+            <UploadCloud className="h-4 w-4" />
+            Upload Document
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

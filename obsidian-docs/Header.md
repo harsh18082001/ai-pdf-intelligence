@@ -1,25 +1,23 @@
 ---
-tags: [frontend, component]
+tags: [frontend, component, retired]
 ---
 ## Purpose
-Sticky top navigation bar: app logo/home link + light/dark/system theme dropdown.
+**Retired.** `client/src/components/layout/Header.tsx` was deleted during the app-shell redesign pass and no longer exists. This note is kept only so links to it (and the git history around it) resolve to an explanation instead of a dead end.
 
 ## Key Details
-- `export function Header()` — no props.
-- `useTheme()` from [[theme-provider]] gives `setTheme`; dropdown items call `setTheme('light' | 'dark' | 'system')`.
-- Logo links to `/` via `react-router-dom`'s `Link`.
-- Sun/Moon icons cross-fade via Tailwind `dark:` variants rather than conditional rendering.
+The old top header (logo + light/dark/system theme dropdown, nothing else) was replaced by a persistent left sidebar — see [[AppSidebar]] (desktop) and [[TopBar]] (mobile hamburger + compact brand mark, shown `lg:hidden`). The theme dropdown that used to live here now lives at the bottom of [[AppSidebar]], same `DropdownMenu`/`useTheme()` code, just relocated.
 
 ## Source
-`client/src/components/layout/Header.tsx`
+Deleted. Was `client/src/components/layout/Header.tsx`.
 
 ## Dependencies
-- Imports: [[theme-provider]] (`useTheme`), shadcn `Button`/`DropdownMenu`.
-- Used by: [[Layout]].
+N/A — nothing imports this anymore (verified via grep before deletion).
 
 ## Related
+- [[AppSidebar]]
+- [[TopBar]]
 - [[Layout]]
 - [[theme-provider]]
 
 ## Notes
-No auth/user menu here — there is no real user identity in this app, only the anonymous `clientId` (see [[AuthContext]]).
+If you're reading this from an old link: go to [[AppSidebar]] for the current logo/theme-toggle code.

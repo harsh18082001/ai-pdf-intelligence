@@ -19,14 +19,14 @@ RTK Query slice for triggering one-click AI actions (summary / key_points / insi
 
 ## Dependencies
 - Imports: [[baseApi]], `ApiResponse`/`AIArtifactDTO` types from `@/types`.
-- Used by: [[MetadataPanel]] (the three AI action buttons).
+- Used by: [[DocumentHeader]] (its "Actions" dropdown, three commands).
 - Backend: [[command.routes]] → [[command.controller]] → [[command.service]].
 
 ## Related
-- [[MetadataPanel]]
+- [[DocumentHeader]]
 - [[command.routes]]
 - [[command.controller]]
 - [[API-Contract]]
 
 ## Notes
-`regenerate` is part of the type but [[MetadataPanel]] never passes it, so every UI-triggered command is cache-first (server checks `ai_artifacts` before calling Gemini) — see [[command.service]].
+`regenerate` is part of the type but [[DocumentHeader]] never passes it, so every UI-triggered command is cache-first (server checks `ai_artifacts` before calling Gemini) — see [[command.service]].

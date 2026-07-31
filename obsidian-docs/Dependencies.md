@@ -16,12 +16,17 @@ Key third-party libraries on both sides and the specific reason each is used in 
 | `@supabase/supabase-js` | `^2.110.6` | Installed for Supabase auth, but **unused** — see [[lib-supabase]]. The project's only confirmed real use of Supabase is as the hosted Postgres provider (server-side `DATABASE_URL`), unrelated to this package. |
 | `react-pdf` | `^10.4.1` | Renders the cached PDF binary in [[PDFViewer]] (canvas-based, via PDF.js under the hood). |
 | `idb` | `^8.0.3` | Promise-based IndexedDB wrapper — backs [[pdfStorage]], the client-side "don't re-download the PDF" cache. |
-| `react-markdown`, `remark-gfm` | `^10.1.0` / `^4.0.1` | Renders AI-generated Markdown (chat replies, summaries/insights) safely as React elements instead of raw HTML — used in [[ChatMessage]] and [[MetadataPanel]]. |
+| `react-markdown`, `remark-gfm` | `^10.1.0` / `^4.0.1` | Renders AI-generated Markdown (chat replies, summaries/insights) safely as React elements instead of raw HTML — used in [[ChatMessage]] and [[DocumentHeader]]. |
 | `sonner` | `^2.0.7` | Toast notifications (success/error) across upload, delete, chat, and command flows. |
 | `tailwindcss` v4, `@tailwindcss/vite`, `tailwind-merge`, `clsx`, `class-variance-authority` | — | Styling system + the `cn()` helper ([[lib-utils|lib/utils.ts]]) for conditional class merging. |
 | `radix-ui` / `@radix-ui/react-alert-dialog` | — | Headless accessible primitives underlying `components/ui/*` (shadcn/ui wrappers). |
 | `lucide-react` | `^1.23.0` | Icon set used throughout components. |
+| `@fontsource-variable/inter`, `@fontsource-variable/fraunces` | `^5.3.0` | Self-hosted variable fonts (imported once in `main.tsx`) backing the "Glacier" design system's `--font-sans`/`--font-serif` tokens — see [[Frontend-Architecture#Design system — "Glacier" (`index.css`)]]. Deliberately not a Google Fonts `<link>`, to avoid an external CDN request. |
 | `next-themes` | `^0.4.6` | Present in dependencies but the app's actual theme logic is a **hand-rolled** context in [[theme-provider]], not this package — appears to be an unused/leftover dependency (no import of `next-themes` found anywhere in `client/src`). |
+| `framer-motion` | `^12.43.0` | Motion library added for the app-shell redesign: route fade/slide transitions ([[PageTransition]]), the sidebar's sliding active-nav indicator ([[AppSidebar]]), the mobile nav drawer ([[MobileSidebarSheet]]), and the document-grid stagger-in entrance ([[DocumentList]]). |
+| `cmdk` | `^1.1.1` | Powers the `⌘K`/`Ctrl K` command palette ([[command-palette]]) — the same primitive used by Linear/Vercel-style command menus. Wrapped by the local `components/ui/command.tsx` (standard shadcn recipe). |
+| `react-resizable-panels` | `^2.1.9` (pinned) | Draggable split panes on [[DocumentPage]] (desktop only). **Pinned to v2** deliberately — v4 (npm's default "latest" at the time this was added) ships a fully rewritten API (`Group`/`Separator`/`orientation` instead of `PanelGroup`/`PanelResizeHandle`/`direction`) that the standard shadcn `resizable.tsx` recipe does not target. Don't blindly `npm update` this package without rewriting `components/ui/resizable.tsx` for the new API first. |
+| `tw-animate-css` | `^1.4.0` | CSS-only package backing the `animate-in`/`animate-out`/`fade-in-0`/`zoom-in-95`/etc. utility classes already referenced by `dialog.tsx`/`alert-dialog.tsx`/`dropdown-menu.tsx`. Before this was added, those classes had no definitions anywhere in the project (Tailwind v4 doesn't ship them, and no plugin provided them) — dialog/menu open/close transitions were silently inert. Imported once via `@import 'tw-animate-css';` in `index.css`. |
 
 ### Server (`server/package.json`)
 | Library | Version | Why it's here |

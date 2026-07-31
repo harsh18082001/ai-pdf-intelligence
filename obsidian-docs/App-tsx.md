@@ -13,7 +13,7 @@ Top-level route definitions for the whole client app.
   </Route>
 </Routes>
 ```
-Two pages total, both nested under [[Layout]] so they share the header/toaster. See [[Frontend-Architecture#Routing table]] for the full table.
+Two pages total, both nested under [[Layout]] so they share the sidebar/toaster/page-transition app shell. See [[Frontend-Architecture#Routing table]] for the full table.
 
 ## Source
 `client/src/App.tsx`
@@ -29,4 +29,4 @@ Two pages total, both nested under [[Layout]] so they share the header/toaster. 
 - [[Frontend-Architecture]]
 
 ## Notes
-Adding a new top-level page means adding a `<Route>` here, nested inside the `Layout` route, not as a sibling — a route added as a sibling of `path="/"` would render without the Header/Toaster.
+Adding a new top-level page means adding a `<Route>` here, nested inside the `Layout` route, not as a sibling — a route added as a sibling of `path="/"` would render without the sidebar/Toaster/page-transition.

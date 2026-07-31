@@ -1,8 +1,13 @@
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { FileQuestion } from 'lucide-react';
 import { useGetDocumentQuery } from '@/api/documentApi';
-import { MetadataPanel } from '@/components/documents/MetadataPanel';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { DocumentHeader } from '@/components/documents/DocumentHeader';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useRecentDocuments } from '@/hooks/useRecentDocuments';
 
 import { PDFViewer } from '@/components/documents/PDFViewer';
 import { ChatInterface } from '@/components/chat/ChatInterface';
@@ -11,19 +16,28 @@ export function DocumentPage() {
   const { id } = useParams<{ id: string }>();
   const documentId = parseInt(id || '0', 10);
   const navigate = useNavigate();
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const { recordVisit } = useRecentDocuments();
 
   const { data: document, isError } = useGetDocumentQuery(documentId, {
     skip: !documentId,
   });
 
+  useEffect(() => {
+    if (document?.title) {
+      recordVisit(documentId, document.title);
+    }
+  }, [documentId, document?.title, recordVisit]);
+
   if (!documentId || isError) {
     return (
-      <div className="container mx-auto p-4 md:p-8 flex flex-col items-center justify-center min-h-[50vh]">
-        <h2 className="text-2xl font-bold mb-2">Document not found</h2>
-        <p className="text-muted-foreground mb-6">
-          The document you're looking for doesn't exist or was deleted.
-        </p>
-        <Button onClick={() => navigate('/')}>Return Home</Button>
+      <div className="flex flex-col items-center justify-center min-h-[50vh] p-4 md:p-8">
+        <EmptyState
+          icon={FileQuestion}
+          title="Document not found"
+          description="The document you're looking for doesn't exist or was deleted."
+          action={<Button onClick={() => navigate('/')}>Return Home</Button>}
+        />
       </div>
     );
   }
@@ -31,32 +45,31 @@ export function DocumentPage() {
   const isReady = document?.status === 'completed';
 
   return (
-    <div className="container mx-auto p-4 md:p-6 min-h-[calc(100vh-4rem)] lg:h-[calc(100vh-4rem)] flex flex-col">
-      <div className="flex items-center gap-4 mb-4">
-        <Link to="/">
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <h1 className="text-2xl font-bold line-clamp-1 flex-1" title={document?.title}>
-          {document?.title || 'Loading...'}
-        </h1>
-      </div>
+    <div className="flex h-full flex-col p-4 md:p-6">
+      <DocumentHeader documentId={documentId} />
 
-      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0 pb-8 lg:pb-0">
-        {/* Left Column: Metadata and Chat */}
-        <div className="w-full lg:w-1/3 flex flex-col gap-6 lg:h-full lg:overflow-y-auto pr-0 lg:pr-2">
-          <MetadataPanel documentId={documentId} />
-
-          {/* Chat Interface */}
+      {isDesktop ? (
+        <ResizablePanelGroup direction="horizontal" className="flex-1 min-h-0">
+          <ResizablePanel defaultSize={42} minSize={28} maxSize={55}>
+            <div className="flex h-full flex-col">
+              <ChatInterface documentId={documentId} isReady={isReady} />
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle className="mx-2" />
+          <ResizablePanel defaultSize={58} minSize={40}>
+            <div className="h-full">
+              <PDFViewer documentId={documentId} />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      ) : (
+        <div className="flex flex-1 min-h-0 flex-col gap-6 pb-8">
           <ChatInterface documentId={documentId} isReady={isReady} />
+          <div className="h-[600px]">
+            <PDFViewer documentId={documentId} />
+          </div>
         </div>
-
-        {/* Right Column: PDF Viewer */}
-        <div className="w-full lg:w-2/3 h-[600px] lg:h-full">
-          <PDFViewer documentId={documentId} />
-        </div>
-      </div>
+      )}
     </div>
   );
 }

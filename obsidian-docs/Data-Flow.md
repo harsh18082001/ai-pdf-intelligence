@@ -52,7 +52,7 @@ File-by-file traces of the five core flows in the app, with exact call sites.
 2. `GET /api/documents` → [[document.routes]] → [[document.controller]]`.listDocuments` → [[document.service]]`.list(clientId)` → [[document.repository]]`.findAll(clientId)` (`[]` if no clientId) → Prisma → Postgres (`documents` table, filtered `clientId`, ordered `createdAt desc`).
 3. Mapped to `DocumentDTO[]`, rendered as [[DocumentCard]] tiles.
 4. Clicking a card navigates to `/documents/:id` → [[DocumentPage]] → `useGetDocumentQuery(id)` → `GET /api/documents/:id` → [[document.service]]`.getById` (ownership-checked if clientId present) → [[document.repository]]`.findById` → Prisma → Postgres.
-5. [[MetadataPanel]] and [[PDFViewer]] independently consume the same `documentId`; `PDFViewer` does **not** hit this API — it reads the PDF binary from local IndexedDB via [[pdfStorage]] only.
+5. [[DocumentHeader]] and [[PDFViewer]] independently consume the same `documentId`; `PDFViewer` does **not** hit this API — it reads the PDF binary from local IndexedDB via [[pdfStorage]] only.
 
 ### 4. Auth / identity flow
 1. `main.tsx` calls `getStoredClientId()` ([[AuthContext]]) at module scope, before rendering — reads/creates `localStorage['dociq_client_id']` (`'usr_' + crypto.randomUUID()` if absent).
@@ -63,13 +63,13 @@ File-by-file traces of the five core flows in the app, with exact call sites.
 6. There is no session, no token, no expiry, no server-side identity store — the `clientId` string itself, as sent by the client, **is** the identity. `lib/supabase.ts`/`lib/user.ts` (client) are unused dead code that could be mistaken for part of this flow — they are not wired in.
 
 ### 5. Command flow
-1. [[MetadataPanel]] (`client/src/components/documents/MetadataPanel.tsx:36`, `handleCommand`) — button click → opens result dialog, calls `executeCommand({ documentId, command }).unwrap()` ([[commandApi]]).
+1. [[DocumentHeader]] (`client/src/components/documents/DocumentHeader.tsx`, `handleCommand`) — Actions dropdown item click → opens result dialog, calls `executeCommand({ documentId, command }).unwrap()` ([[commandApi]]).
 2. `POST /api/commands` → [[command.routes]] (`aiLimiter` → `validate(commandSchema)`) → [[command.controller]]`.executeCommand` (no clientId handling anywhere in this path).
 3. [[command.service]]`.execute(documentId, command, regenerate)`:
    a. Validate `command` is in `ARTIFACT_TYPES`; fetch document (no ownership check); require `status === COMPLETED`.
    b. If `!regenerate`: [[ai-artifact.repository]]`.findByDocumentAndType` — cache hit returns immediately.
    c. Cache miss: [[chunk.repository]]`.findByDocumentId` (all chunks, no truncation) → [[templates]] prompt builder (`buildSummaryPrompt`/`buildKeyPointsPrompt`/`buildInsightsPrompt`, or summary as a fallback for any other type) → [[ai.service]]`.chatCompletion` → [[gemini.provider]] (with fallback cascade) → [[ai-artifact.repository]]`.upsert(documentId, command, content)`.
-4. Response `{ success: true, data: AIArtifactDTO }` → [[MetadataPanel]] sets `commandResult`, renders via `ReactMarkdown` in the dialog; `invalidatesTags: [{ type: 'AIArtifact', id: documentId }]` on the mutation.
+4. Response `{ success: true, data: AIArtifactDTO }` → [[DocumentHeader]] sets `commandResult`, renders via `ReactMarkdown` in the dialog; `invalidatesTags: [{ type: 'AIArtifact', id: documentId }]` on the mutation.
 
 ## Source
 Cross-reference of all files named above.

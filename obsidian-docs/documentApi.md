@@ -17,7 +17,7 @@ RTK Query slice for document CRUD: list, get one, upload, delete.
 
 ## Dependencies
 - Imports: [[baseApi]], `ApiResponse`/`DocumentDTO` types from `@/types`.
-- Used by: [[DocumentList]] (`getDocuments`), [[DocumentPage]]/[[MetadataPanel]] (`getDocument`), [[UploadModal]] (`uploadDocument`), [[DocumentCard]] (`deleteDocument`).
+- Used by: [[DocumentList]] (`getDocuments`), [[DocumentPage]]/[[DocumentHeader]] (`getDocument`), [[UploadModal]] (`uploadDocument`), [[DocumentCard]] (`deleteDocument`).
 - Backend: [[document.routes]] → [[document.controller]] → [[document.service]] → [[document.repository]].
 
 ## Related

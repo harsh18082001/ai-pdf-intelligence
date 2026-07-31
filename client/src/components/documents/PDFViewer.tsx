@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/ui/empty-state';
 import { loadPDF, savePDF } from '@/services/pdfStorage';
 import { toast } from 'sonner';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -109,11 +110,11 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
       }`}
     >
       {/* Controls Header */}
-      <div className="flex items-center justify-between p-2 border-b bg-muted/40">
-        <div className="flex items-center space-x-1">
+      <div className="flex items-center justify-between p-2 border-b bg-muted/40 shadow-xs">
+        <div className="flex items-center gap-1 rounded-md border bg-background p-0.5">
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             onClick={handleZoomOut}
             disabled={scale <= 0.5 || !pdfFile}
             title="Zoom Out"
@@ -129,17 +130,17 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
           </span>
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             onClick={handleZoomIn}
             disabled={scale >= 3.0 || !pdfFile}
             title="Zoom In"
           >
             <ZoomIn className="h-4 w-4" />
           </Button>
-          <div className="w-px h-4 bg-border mx-1" />
+          <div className="w-px h-4 bg-border mx-0.5" />
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             onClick={toggleMaximize}
             title={isMaximized ? 'Minimize View' : 'Maximize View'}
           >
@@ -147,10 +148,10 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
           </Button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-1 rounded-md border bg-background p-0.5">
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             onClick={goToPrevPage}
             disabled={pageNumber <= 1 || !pdfFile}
           >
@@ -159,7 +160,7 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
           <div className="flex items-center space-x-1 text-sm">
             <Input
               type="text"
-              className="w-12 h-8 text-center px-1"
+              className="w-12 h-7 text-center px-1"
               value={pageInput}
               onChange={handlePageInputChange}
               onKeyDown={handlePageInputSubmit}
@@ -169,7 +170,7 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
           </div>
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             onClick={goToNextPage}
             disabled={pageNumber >= numPages || !pdfFile}
           >
@@ -185,20 +186,18 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
             <span className="animate-pulse">Loading local PDF...</span>
           </div>
         ) : !pdfFile ? (
-          <div className="flex flex-col items-center justify-center h-full text-center p-6 max-w-sm mx-auto">
-            <div className="p-3 bg-primary/10 rounded-full mb-3">
-              <FileText className="h-8 w-8 text-primary" />
-            </div>
-            <h4 className="font-semibold text-base mb-1">PDF Preview Not Stored On This Device</h4>
-            <p className="text-sm text-muted-foreground mb-4">
-              AI analysis, chat, and summaries are fully active! To preview the document visual
-              layout here, attach your local PDF file.
-            </p>
-            <Button onClick={handleAttachPDF} variant="outline" className="gap-2">
-              <Upload className="h-4 w-4" />
-              Attach PDF to View Preview
-            </Button>
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="PDF preview not stored on this device"
+            description="AI analysis, chat, and summaries are fully active. To preview the document visual layout here, attach your local PDF file."
+            action={
+              <Button onClick={handleAttachPDF} variant="outline" className="gap-2">
+                <Upload className="h-4 w-4" />
+                Attach PDF to View Preview
+              </Button>
+            }
+            className="h-full max-w-sm mx-auto"
+          />
         ) : (
           <Document
             file={pdfFile}

@@ -17,9 +17,18 @@ Cross-cutting map of the client: routing, bootstrap order, Redux/RTK Query shape
 ### Routing table (`App.tsx`, react-router-dom v7)
 | Path | Element | Notes |
 |---|---|---|
-| `/` (layout route) | [[Layout]] | wraps everything below in Header + Toaster |
-| `/` (index) | [[HomePage]] | document grid + upload |
+| `/` (layout route) | [[Layout]] | wraps everything below in the app shell (sidebar + top bar + toaster) |
+| `/` (index) | [[HomePage]] | document grid + upload, filters synced to `?q=`/`?status=`/`?sort=` |
 | `/documents/:id` | [[DocumentPage]] | metadata + chat + PDF viewer |
+
+### App shell — sidebar navigation, not a top header (redesign pass)
+The original design used a single top `Header` (logo + theme toggle only). It was retired in favor of a persistent left sidebar, matching the "real app, not a marketing site" direction:
+- [[Layout]] renders [[AppSidebar]] (desktop: fixed `w-64` column; mobile: contents reused inside [[MobileSidebarSheet]], a framer-motion slide-over triggered by [[TopBar]]'s hamburger button — `Header.tsx` no longer exists).
+- [[AppSidebar]] owns: the brand mark, the primary [[UploadModal]] trigger, the `⌘K`/`Ctrl K` search trigger that opens [[command-palette]], status-filter nav links (see below), a "Recent" list from [[useRecentDocuments]], and the theme dropdown (moved here from the old Header). It also collapses to a `w-[68px]` icon-only rail (toggle button, state persisted to `localStorage['dociq-sidebar-collapsed']`) — collapsed mode hides all text labels/counts/the Recent list and shows a `Tooltip` (the `radix-ui`-bundled primitive, `components/ui/tooltip.tsx`) with the full label on hover for every icon. This exists specifically so a content-dense screen like [[DocumentPage]] can reclaim the sidebar's width without losing navigation entirely — see [[DocumentPage]]'s own note for why that page needed it.
+- **Filters are real URL state, not local `useState`.** [[HomePage]] reads/writes `search`/`statusFilter`/`sortBy` via `useSearchParams` (`?q=`, `?status=`, `?sort=`). [[AppSidebar]]'s status nav items are plain `<Link to="/?status=completed">` etc. — clicking one is real navigation (back button works, links are shareable), not a synthetic filter click. [[DocumentToolbar]] itself is unchanged/still fully controlled; only where its controlled values come from moved.
+- A `⌘K` command palette ([[command-palette]], built on `cmdk`) provides: jump-to-any-document (fuzzy search over the same `useGetDocumentsQuery()` cache the sidebar and grid use — one shared network request, not three), "Upload Document" (navigates to `/?upload=1`, which [[UploadModal]] watches for via its opt-in `autoOpenFromUrl` prop), and theme actions.
+- Route transitions use [[PageTransition]] (framer-motion fade/slide keyed on `location.pathname`, using `useOutlet()`), rendered inside `Layout`'s `<main>`. The old CSS `.animate-fade-in`/`.animate-fade-in-up` page-level classes were removed to avoid double-animating against this.
+- [[DocumentPage]]'s title/status/metadata/AI-actions used to be two stacked components ([[PageHeader]] breadcrumb + a card-based `MetadataPanel`) sitting above [[ChatInterface]] in a narrow resizable pane — dense enough that it read as "small boxes forced onto the screen" (direct user feedback). Merged into one slim horizontal strip, [[DocumentHeader]] (breadcrumb + title + status badge + inline date/size/page chips + a single "Actions" dropdown replacing 3 stacked buttons), freeing the entire left resizable pane for [[ChatInterface]] alone. Both [[PageHeader]] and the old `MetadataPanel` were deleted.
 
 ### Redux store shape ([[store]])
 Only one slice: `state.api` — the entire RTK Query cache from [[baseApi]] (with [[chatApi]], [[commandApi]], [[documentApi]] endpoints injected into it). There is no hand-written application reducer; all local UI state is component-level `useState`.
@@ -34,7 +43,18 @@ See [[AuthContext]] in full. Summary: an anonymous UUID (`localStorage['dociq_cl
 - AI features (chat, summary/insights) are entirely independent of this cache — they work whether or not a local PDF blob exists, since the backend has its own copy of the extracted text/chunks/embeddings.
 
 ### shadcn/ui primitives (`client/src/components/ui/*`)
-Unmodified vendored wrappers around Radix UI — not documented individually: `button`, `card`, `dialog`, `dropdown-menu`, `avatar`, `alert-dialog`, `badge`, `input`, `textarea`, `sonner` (toast). Treat these as a stable, un-customized base layer.
+Unmodified (or lightly re-themed) vendored wrappers around Radix UI — not documented individually: `button`, `card`, `dialog`, `dropdown-menu`, `avatar`, `alert-dialog`, `badge`, `input`, `textarea`, `sonner` (toast), `skeleton`, `command` (cmdk wrapper, standard recipe), `resizable` (`react-resizable-panels` wrapper, standard recipe — see the version-pinning note in [[Dependencies]]), `tooltip` (`radix-ui`'s bundled `Tooltip` namespace — no new dependency needed, it ships inside the already-installed unified `radix-ui` package; used by [[AppSidebar]]'s collapsed icon-rail mode). Treat these as a stable base layer; only their Tailwind classes were touched during the design pass, not their logic. `badge` gained tone variants (`success`/`warning`/`info`/`danger`/`neutral`) consumed by [[DocumentStatusBadge]].
+
+The one exception is [[EmptyState]] (`components/ui/empty-state.tsx`) — it lives alongside the vendored primitives but is hand-written for this app (icon/title/description/action props), so it gets its own note like [[theme-provider]] does.
+
+### Design system — "Glacier" (`index.css`)
+- Palette: cool-neutral (blue-tinted) grays + a deep cyan-blue `--primary` + a muted indigo-violet `--secondary`, all OKLCH, defined in `:root`/`.dark` in `client/src/index.css`. `--success`/`--warning`/`--info` tone tokens sit alongside the existing `--destructive`, used by [[DocumentStatusBadge]].
+  - **Renamed from "Ink & Ember"**: the first pass shipped a warm burnt-amber primary + ink-teal secondary on warm neutrals. Recolored to this cool direction in a follow-up pass based on direct user feedback ("warm colors, can we have something cool") — same token *structure* (same variable names, same radius/shadow/motion scales), only the actual OKLCH hue values changed (roughly hue 45/80 warm → hue 230/275/240 cool). If you find a stale "Ink & Ember"/"burnt-amber"/"ink-teal" reference anywhere, it's leftover copy from before this rename, not a second design system.
+- Typography: self-hosted variable fonts via `@fontsource-variable/inter` and `@fontsource-variable/fraunces`, imported once in `main.tsx` (no CDN, no external font requests). `--font-sans` (Inter Variable) is the default body font; `--font-serif` (Fraunces Variable) is applied via the `font-serif` utility only to page-level H1s ([[HomePage]] hero, [[DocumentHeader]] title).
+- Radius scale is fixed px values, not a single `--radius` calc chain: `sm` 6px (badges/chips), `md` 10px (buttons/inputs), `lg` 14px (cards), `xl` 20px (dialogs).
+- Shadow (`--shadow-xs/sm/md/lg`) and motion (`--duration-fast/standard/slow`, `--ease-out/in`) are also token-driven now — components reference them via Tailwind's `duration-(--duration-standard)` arbitrary-var syntax rather than hardcoded `duration-300` etc.
+- The old primary→`blue-600` gradient (hero title, upload CTA) and the blurred pulsing "blob" hero background were both removed as generic-template patterns — see [[HomePage]].
+- `.glass` (backdrop-blur) is scoped to [[AppSidebar]]/[[TopBar]] only (the old top `Header` it was originally scoped to no longer exists); cards use plain `shadow-sm`/`shadow-md` elevation instead.
 
 ## Source
 `client/src/App.tsx`, `client/src/main.tsx`, `client/src/store/*`, `client/src/context/AuthContext.tsx`
@@ -51,6 +71,17 @@ Ties together every frontend note in this vault. See the per-file notes for exac
 - [[pdfStorage]]
 - [[Backend-Architecture]]
 - [[Data-Flow]]
+- [[DocumentStatusBadge]]
+- [[EmptyState]]
+- [[DocumentHeader]]
+- [[DocumentToolbar]]
+- [[AppSidebar]]
+- [[TopBar]]
+- [[MobileSidebarSheet]]
+- [[PageTransition]]
+- [[command-palette]]
+- [[useRecentDocuments]]
+- [[useMediaQuery]]
 
 ## Notes
 Two dead files (`lib/supabase.ts`, `lib/user.ts`) look load-bearing but aren't — see [[Known-Issues-and-Conventions]] before building new auth features on top of them.

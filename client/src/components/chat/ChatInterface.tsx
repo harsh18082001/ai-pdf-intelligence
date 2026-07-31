@@ -4,6 +4,7 @@ import { useChat } from '@/hooks/useChat';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
 
 interface ChatInterfaceProps {
@@ -30,14 +31,13 @@ export function ChatInterface({ documentId, isReady }: ChatInterfaceProps) {
           <MessageSquare className="h-5 w-5 text-primary" />
           Chat & Analysis
         </div>
-        <div className="flex-1 p-6 flex flex-col items-center justify-center text-center">
-          <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
-            <MessageSquare className="h-6 w-6 text-muted-foreground opacity-50" />
-          </div>
-          <h3 className="font-medium mb-1">Chat Disabled</h3>
-          <p className="text-sm text-muted-foreground max-w-[250px]">
-            Document processing is required before you can chat or generate insights.
-          </p>
+        <div className="flex-1 flex items-center justify-center">
+          <EmptyState
+            icon={MessageSquare}
+            title="Chat disabled"
+            description="Document processing is required before you can chat or generate insights."
+            className="max-w-[280px]"
+          />
         </div>
       </div>
     );

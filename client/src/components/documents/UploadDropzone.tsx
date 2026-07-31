@@ -84,8 +84,8 @@ export function UploadDropzone({ onFileSelect, isLoading }: UploadDropzoneProps)
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={cn(
-        'border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center gap-4 transition-colors text-center cursor-pointer',
-        isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:bg-muted/50',
+        'border-2 border-dashed rounded-lg p-10 flex flex-col items-center justify-center gap-4 transition-colors duration-(--duration-standard) text-center cursor-pointer',
+        isDragging ? 'border-primary bg-primary/10' : 'border-muted-foreground/25 hover:bg-muted/50',
       )}
     >
       <input

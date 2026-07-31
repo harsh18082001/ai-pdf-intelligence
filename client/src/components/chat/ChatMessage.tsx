@@ -1,12 +1,26 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { User, Bot, Loader2 } from 'lucide-react';
+import { User, Bot } from 'lucide-react';
 import { Avatar } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import type { ChatMessage as IChatMessage } from '@/hooks/useChat';
 
 interface ChatMessageProps {
   message: IChatMessage;
+}
+
+function TypingIndicator() {
+  return (
+    <div className="flex items-center gap-1.5 mt-1">
+      {[0, 0.2, 0.4].map((delay) => (
+        <span
+          key={delay}
+          className="h-1.5 w-1.5 rounded-full bg-muted-foreground animate-typing-dot"
+          style={{ animationDelay: `${delay}s` }}
+        />
+      ))}
+    </div>
+  );
 }
 
 export function ChatMessage({ message }: ChatMessageProps) {
@@ -17,7 +31,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
   }
 
   return (
-    <div className={cn('flex w-full px-4 py-6 gap-4', isUser ? 'bg-background' : 'bg-muted/30')}>
+    <div
+      className={cn(
+        'flex w-full px-4 py-6 gap-4',
+        isUser ? 'bg-background' : 'bg-muted/30 border-l-2 border-primary',
+      )}
+    >
       <Avatar
         className={cn(
           'h-8 w-8 shrink-0 flex items-center justify-center border',
@@ -36,10 +55,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           {message.content ? (
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
           ) : message.isStreaming ? (
-            <div className="flex items-center text-muted-foreground gap-2 text-sm mt-1">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Thinking...
-            </div>
+            <TypingIndicator />
           ) : null}
 
           {message.isStreaming && message.content && (
