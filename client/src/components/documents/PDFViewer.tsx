@@ -105,8 +105,8 @@ export function PDFViewer({ documentId }: PDFViewerProps) {
 
   return (
     <div
-      className={`flex flex-col h-full w-full bg-card border rounded-lg overflow-hidden transition-all duration-200 ${
-        isMaximized ? 'fixed inset-4 z-50 shadow-2xl' : 'shadow-sm relative'
+      className={`flex flex-col bg-card border rounded-lg overflow-hidden transition-all duration-200 ${
+        isMaximized ? 'fixed inset-4 z-50 shadow-2xl w-[calc(100dvw-2rem)] h-[calc(100dvw-2rem)]' : 'shadow-sm relative h-full w-full'
       }`}
     >
       {/* Controls Header */}
