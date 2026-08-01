@@ -115,7 +115,7 @@ function SidebarContent({
   const { setTheme } = useTheme();
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-background">
       <div className="flex h-16 shrink-0 items-center px-4">
         <Link to="/" className="group flex items-center gap-2.5 min-w-0">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-primary to-secondary text-primary-foreground shadow-sm transition-transform duration-(--duration-standard) group-hover:scale-105">
