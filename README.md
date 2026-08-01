@@ -1,7 +1,6 @@
-# DocIQ — Enterprise-Grade AI-Powered PDF Intelligence & RAG Platform
+# DocIQ — AI-Powered PDF Intelligence & RAG Platform
 
 [![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-ai--pdf--intelligence.vercel.app-success?style=for-the-badge&logo=vercel)](https://ai-pdf-intelligence.vercel.app/)
-![DocIQ Banner](https://img.shields.io/badge/DocIQ-AI--Powered%20PDF%20Intelligence-blueviolet?style=for-the-badge&logo=openai)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React 19](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
@@ -12,67 +11,89 @@
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini_AI-8E75B2?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
 [![Node.js](https://img.shields.io/badge/Node.js_22+-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 
-**DocIQ** is a full-stack, enterprise-grade AI intelligence platform designed to extract deep context, structured insights, and interactive real-time answers from complex unstructured PDF documents. Powered by modern **Retrieval-Augmented Generation (RAG)**, serverless **Pinecone vector embeddings**, **Google Gemini LLM pipelines with automated multi-model resilience**, **Prisma + PostgreSQL**, and a **React 19 + Redux Toolkit** glassmorphic interface, DocIQ turns static files into dynamic knowledge repositories.
+**DocIQ** is a full-stack **Retrieval-Augmented Generation (RAG)** platform that turns static PDFs into interactive knowledge bases — contextual chat with token streaming, semantic vector search, and one-click AI artifacts (summary, key points, insights).
 
----
+> **Independent project** — designed and built end-to-end as a production-oriented demonstration of modern full-stack + AI systems engineering.
 
 [🚀 **Try the Live Application**](https://ai-pdf-intelligence.vercel.app/)
 
 ---
 
-## 🎯 Executive Summary & Architectural Vision
+## Table of Contents
 
-Traditional document processing requires manually sifting through hundreds of pages, risking context loss and human error. DocIQ solves this by providing a scalable, decoupled, sub-second query architecture engineered for high throughput and zero-latency user experience.
+- [Why DocIQ](#-why-dociq)
+- [System Architecture](#-system-architecture)
+- [Core Capabilities](#-core-capabilities)
+- [End-to-End Flows](#-end-to-end-flows)
+- [Data & Vector Model](#-data--vector-model)
+- [API Reference](#-api-reference)
+- [Tech Stack](#-tech-stack)
+- [Repository Structure](#-repository-structure)
+- [Local Setup](#-local-setup)
+- [Security & Performance](#-security--performance)
+- [Design Decisions](#-design-decisions)
+- [Engineering Highlights](#-engineering-highlights)
 
-### Key Architectural Pillars
+---
 
-- **Decoupled Monorepo Architecture**: Clean separation between React 19 client workspace and Node.js 22 Express 5 server workspace using NPM Workspaces.
-- **Enterprise RAG Pipeline**: High-accuracy semantic retrieval using 768-dimensional vector embeddings stored in Pinecone with tenant/client namespace isolation (`clientId`).
-- **Real-Time Token Streaming**: Low-latency, token-by-token response streaming using Server-Sent Events (SSE) and Async Generators.
-- **Automated AI Failover Infrastructure**: Dynamic LLM fallback fallback chain (`gemini-1.5-flash` / `gemini-2.5-flash` $\rightarrow$ `gemini-3.5-flash` $\rightarrow$ `gemma-4-26b` $\rightarrow$ `gemini-flash-lite`) ensuring 99.9% query uptime under rate limits.
-- **Multi-Tier Caching Engine**: 3-level caching strategy spanning client-side **IndexedDB** (zero-network PDF loading), **RTK Query API cache**, and backend **PostgreSQL AI Artifact Cache** (avoiding duplicate LLM billing).
+## 🎯 Why DocIQ
+
+Manual PDF review does not scale. DocIQ closes that gap with a **decoupled monorepo**: a React 19 client and an Express 5 API that own ingestion, embeddings, retrieval, and generation as first-class pipelines — not a thin wrapper around a single LLM call.
+
+| Pillar | What it means in this codebase |
+| :----- | :----------------------------- |
+| **Production-style RAG** | Token-aware chunking (~512 / 50 overlap) → embeddings → Pinecone cosine retrieval (top-K = 5) → grounded Gemini answers |
+| **Real-time streaming** | Server-Sent Events (SSE) + async generators for token-by-token chat |
+| **Resilient LLM layer** | Multi-model fallback chain on 429 / 503 / 404 |
+| **Multi-tier caching** | Browser IndexedDB (PDF bytes) + RTK Query (API) + PostgreSQL AI artifacts (avoid repeat LLM cost) |
+| **Client isolation** | Anonymous `clientId` on documents + Pinecone namespaces for vector partition |
 
 ---
 
 ## 🏗️ System Architecture
 
-Below is the end-to-end system architecture illustrating data flow across client components, backend middleware, vector search infrastructure, relational storage, and external AI providers.
+High-level view of client, API gateway, domain services, storage, and AI providers:
 
 ```mermaid
 graph TB
-    subgraph Client ["🖥️ Client Layer (React 19 + Vite + Redux Toolkit)"]
-        UI["🎨 Glassmorphic UI\n(PDF Viewer + Chat Panel)"]
-        IDB[("💾 Browser IndexedDB\n(Local PDF Blob Cache)")]
-        RTK["⚡ RTK Query Store\n(API Cache & State)"]
+    subgraph Client ["🖥️ Client — React 19 + Vite + Redux Toolkit"]
+        UI["UI Shell<br/>Sidebar · Command Palette · Document Workspace"]
+        IDB[("IndexedDB<br/>Local PDF blob cache")]
+        RTK["RTK Query<br/>Document / Message / Artifact cache"]
+        CHAT["useChat · EventSource SSE"]
     end
 
-    subgraph Middleware ["🛡️ API Gateway & Security Layer (Express 5)"]
-        CORS["🔒 CORS & Helmet"]
-        RL["⏱️ Rate Limiter (IP/Proxy Trust)"]
-        VAL["Zod Validation & Upload Parser"]
+    subgraph Gateway ["🛡️ Express 5 API Gateway"]
+        CORS["CORS + Helmet"]
+        RL["Rate limits<br/>100/15min · AI 20/min"]
+        VAL["Zod validation · PDF upload"]
+        ERR["Central AppError handler"]
     end
 
-    subgraph Backend ["⚙️ Core Server Services (Node.js 22 + TypeScript)"]
-        DS["📄 Document Service"]
-        PS["✂️ Text Chunker & Processing Service"]
-        CS["💬 Chat Service (RAG Engine)"]
-        CMD["⚡ Command Service (AI Artifacts)"]
-        REPO["🗄️ Repository Layer"]
+    subgraph Domain ["⚙️ Domain Services"]
+        DS["Document Service"]
+        PS["Processing Service<br/>extract · chunk · embed"]
+        CS["Chat Service — RAG"]
+        CMD["Command Service — Artifacts"]
+        REPO["Repository layer · Prisma"]
     end
 
-    subgraph Storage ["💾 Data & Vector Storage Layer"]
-        PG[("🐘 PostgreSQL\n(Prisma ORM: Docs, Messages, Artifacts)")]
-        PC[("🌲 Pinecone Vector DB\n(768-dim Embeddings + Namespace Isolation)")]
+    subgraph Storage ["💾 Persistence"]
+        PG[("PostgreSQL<br/>Documents · Chunks · Messages · Artifacts")]
+        PC[("Pinecone index: dociq<br/>~768-dim · clientId namespaces")]
     end
 
-    subgraph AI ["🤗 AI Pipeline Layer"]
-        GEM["♊ Google Generative AI\n(Gemini 2.5 / 1.5 / Fallbacks)"]
-        EMB["📐 text-embedding-004\n(Vector Model)"]
+    subgraph AI ["🤖 AI Layer"]
+        GEM["Google Gemini<br/>Chat + streaming"]
+        EMB["Embedding model<br/>batch + single"]
+        FB["Failover models<br/>on 429/503/404"]
     end
 
     UI <--> IDB
     UI <--> RTK
-    RTK --> CORS --> RL --> VAL
+    CHAT --> CORS
+    RTK --> CORS
+    CORS --> RL --> VAL --> ERR
     VAL --> DS & CS & CMD
     DS --> PS
     PS --> EMB --> GEM
@@ -81,96 +102,157 @@ graph TB
     CS --> EMB
     CS --> PC
     CS --> GEM
-    CS --> REPO --> PG
-    CMD --> REPO --> PG
+    CS --> FB
+    CS --> REPO
+    CMD --> REPO
     CMD --> GEM
+    CMD --> FB
+```
+
+### Request lifecycle (server)
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant MW as Middleware stack
+    participant R as Routes / Controllers
+    participant S as Services
+    participant DB as Postgres + Pinecone
+    participant AI as Gemini
+
+    C->>MW: HTTP / SSE request + x-client-id
+    MW->>MW: CORS → Helmet → JSON/file → Rate limit
+    MW->>R: /api/*
+    R->>S: Validated DTO + clientId
+    alt Upload / process
+        S->>DB: Create document, chunks, vectors
+        S->>AI: Embeddings
+    else Chat stream
+        S->>AI: Query embedding
+        S->>DB: Top-K similarity
+        S->>AI: Stream completion
+        S-->>C: SSE tokens → [DONE]
+    else Command
+        S->>DB: Artifact cache hit/miss
+        S->>AI: Generate if miss
+    end
+    S-->>R: DTO / stream
+    R-->>C: ApiResponse or SSE
 ```
 
 ---
 
-## ✨ Core Features & Technical Highlights
+## ✨ Core Capabilities
 
-| Feature                         | Technical Implementation                                                                                                   | Benefit / Impact                                                                |
-| :------------------------------ | :------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------ |
-| **High-Precision PDF Parsing**  | Integrated `unpdf` (PDF.js core engine) for non-blocking server-side text extraction.                                      | Handles multi-page complex PDFs without thread starvation.                      |
-| **Serverless Vector RAG**       | Token-aware sliding window chunking (~512 tokens with 50-token overlap) vectorized via `text-embedding-004` into Pinecone. | Sub-second semantic search with zero hallucination context retrieval.           |
-| **Real-Time Token Streaming**   | HTTP SSE / Async Generator streams directly from Gemini model to React UI.                                                 | Interactive typewriter streaming experience (<300ms Time-To-First-Token).       |
-| **Multi-Tenant Isolation**      | Client ID metadata tagging in PostgreSQL & Pinecone Namespace partitioning.                                                | Strict data boundary enforcement between separate user sessions.                |
-| **Cached One-Click AI Actions** | Permanent caching of generated Summaries, Key Points, and Insights in PostgreSQL `ai_artifacts`.                           | Eliminates redundant AI processing & reduces API cost by up to 80%.             |
-| **Zero-Network PDF Viewer**     | Raw PDF binary cached directly inside browser IndexedDB via `idb`.                                                         | Renders giant PDF files instantly side-by-side with chat, preserving bandwidth. |
-| **Automated AI Failover**       | Try-catch provider chain cycling through fallback Gemini models upon HTTP 429/503/404.                                     | Uninterrupted service availability during API provider disruptions.             |
-
----
-
-## 🔄 End-to-End System Flows
-
-### 1. Document Ingestion & Vector Indexing Pipeline
-
-```mermaid
-flowchart LR
-    A["📄 User Uploads PDF File"] --> B["🔒 Validate & Parse via Express FileUpload"]
-    B --> C["📝 Extract Raw Text via unpdf Engine"]
-    C --> D{"Text Length >= 50 chars?"}
-    D -- No --> E["⚠️ Mark Status: OCR_REQUIRED\n(Log Scan Warning)"]
-    D -- Yes --> F["✂️ Algorithmic Chunking\n(~512 tokens, 50-token overlap)"]
-    F --> G["📐 Vectorize Chunks via Gemini\ntext-embedding-004 (768-dim)"]
-    G --> H["🌲 Batch Upsert to Pinecone Vector DB\n(With Client Namespace & Metadata)"]
-    G --> I["💾 Save Document & Chunks Metadata\nto PostgreSQL via Prisma"]
-    H & I --> J["✅ Mark Status: COMPLETED"]
-```
-
-### 2. Contextual RAG Chat & Real-Time Token Streaming Workflow
-
-```mermaid
-flowchart LR
-    A["💬 User Query Received"] --> B["📐 Generate Vector Embedding\nfor Query (768-dim)"]
-    B --> C["🌲 Pinecone Cosine Similarity Search\n(Filter: Document ID & Namespace, Top K=5)"]
-    C --> D["📋 Retrieve Top 5 Relevant Chunks"]
-    D --> E["🧩 Construct System Prompt\n(System Rules + Context Chunks + Prior Chat History)"]
-    E --> F["♊ Send Prompt to Gemini LLM\n(Initiate Stream Response)"]
-    F --> G["📡 Stream SSE Tokens to Client"]
-    G --> H["💾 Save Assistant Response to\nPostgreSQL Messages Table"]
-```
-
-### 3. One-Click AI Command Execution & Multi-Tier Caching Flow
-
-```mermaid
-flowchart LR
-    A["⚡ Click Action\n(Summary / Key Points / Insights)"] --> B{"🔍 Check PostgreSQL Cache\n(ai_artifacts Table)"}
-    B -- Cache Hit --> C["⚡ Return Stored Artifact\nInstantly (0ms AI Latency)"]
-    B -- Cache Miss --> D["📋 Load All Chunks for Document\nfrom Relational DB"]
-    D --> E["📝 Inject into Specialized Prompt\nTemplate"]
-    E --> F["♊ Synthesize Content via Gemini LLM"]
-    F --> G["💾 Upsert Result into ai_artifacts\nTable (Unique Constraint: docId + type)"]
-    G --> H["📄 Return Synthesized Artifact to UI"]
-```
-
-### 4. Multi-Model AI Resilience & Failover Architecture
-
-```mermaid
-flowchart LR
-    A["🚀 Request AI Generation"] --> B["♊ Primary: gemini-1.5-flash / gemini-2.5-flash"]
-    B -- Success --> Z["🎉 Return AI Output"]
-    B -- Error 429/503/404 --> C["🔄 Fallback 1: gemini-3.5-flash"]
-    C -- Success --> Z
-    C -- Error --> D["🔄 Fallback 2: gemma-4-26b-a4b-it"]
-    D -- Success --> Z
-    D -- Error --> E["🔄 Fallback 3: gemini-flash-lite-latest"]
-    E -- Success --> Z
-    E -- All Failed --> F["❌ Throw Unified AppError"]
-```
+| Capability | Implementation | Why it matters |
+| :--------- | :------------- | :------------- |
+| **PDF ingestion pipeline** | `unpdf` text extract → OCR gate (&lt;50 chars → `ocr_required`) → chunk → embed → Postgres + Pinecone | Full path from file to searchable knowledge |
+| **Semantic RAG chat** | Query embed → Pinecone filter by `documentId` + namespace → top-K 5 → prompt with last 6 turns | Grounded answers without dumping the whole PDF into the context window |
+| **Token streaming UI** | `GET .../chat/stream` via `EventSource` + optimistic local messages | Low time-to-first-token chat experience |
+| **One-click AI actions** | Summary / key points / insights with Postgres `ai_artifacts` upsert cache | Repeat clicks are free after first generation |
+| **Zero-network PDF viewer** | Raw file stored in IndexedDB at upload; `react-pdf` renders client-side | Instant side-by-side preview without a download API |
+| **LLM failover** | Primary chat model → `gemini-3.5-flash` → `gemma-4-26b-a4b-it` → `gemini-flash-lite-latest` | Degrades gracefully under rate limits and model outages |
+| **App shell UX** | Collapsible sidebar, `⌘K` command palette, URL-synced filters, resizable chat/PDF panes | Product-quality navigation, not a single-page demo form |
 
 ---
 
-## 🗄️ Database & Vector Schema Architecture
+## 🔄 End-to-End Flows
 
-### Entity-Relationship Diagram (ERD)
+### 1. Document ingestion & vector indexing
+
+Upload runs **synchronously in the request** (intentional for serverless — see [Design Decisions](#-design-decisions)). The response returns only after processing finishes (`completed` / `failed` / `ocr_required`).
+
+```mermaid
+flowchart LR
+    A["📄 Upload PDF"] --> B["Validate MIME + size<br/>express-fileupload"]
+    B --> C["Create Document<br/>status: pending"]
+    C --> D["Extract text · unpdf"]
+    D --> E{"Text length ≥ 50?"}
+    E -- No --> F["status: ocr_required"]
+    E -- Yes --> G["Chunk ~512 tokens<br/>50-token overlap"]
+    G --> H["Batch embed via Gemini"]
+    H --> I["Persist Chunk rows<br/>PostgreSQL"]
+    H --> J["Upsert vectors<br/>Pinecone · clientId ns"]
+    I --> K["status: completed"]
+    J --> K
+    K --> L["Client saves File<br/>to IndexedDB"]
+```
+
+### 2. Contextual RAG chat + SSE streaming
+
+```mermaid
+flowchart LR
+    A["💬 User message"] --> B["Save user Message"]
+    B --> C["Embed question"]
+    C --> D["Pinecone top-K=5<br/>documentId filter"]
+    D --> E["Build QA prompt<br/>context + last 6 turns"]
+    E --> F["Gemini stream"]
+    F --> G["SSE data chunks"]
+    G --> H["Save assistant Message"]
+    H --> I["Client: [DONE]<br/>invalidate Message tag"]
+```
+
+### 3. AI command execution & artifact cache
+
+```mermaid
+flowchart LR
+    A["⚡ Actions menu<br/>summary · key_points · insights"] --> B{"Artifact cached<br/>docId + type?"}
+    B -- Hit --> C["Return instantly<br/>no LLM call"]
+    B -- Miss --> D["Load all chunks"]
+    D --> E["Typed prompt template"]
+    E --> F["Gemini completion"]
+    F --> G["Upsert ai_artifacts"]
+    G --> H["Render Markdown dialog"]
+```
+
+### 4. Multi-model resilience
+
+```mermaid
+flowchart LR
+    A["AI generation request"] --> B["Primary<br/>GEMINI_CHAT_MODEL"]
+    B -- OK --> Z["Return / stream"]
+    B -- 429 / 503 / 404 --> C["Fallback 1<br/>gemini-3.5-flash"]
+    C -- OK --> Z
+    C -- fail --> D["Fallback 2<br/>gemma-4-26b-a4b-it"]
+    D -- OK --> Z
+    D -- fail --> E["Fallback 3<br/>gemini-flash-lite-latest"]
+    E -- OK --> Z
+    E -- fail --> F["AppError to client"]
+```
+
+### 5. Identity & multi-tier cache
+
+```mermaid
+flowchart TB
+    subgraph Identity
+        LS["localStorage dociq_client_id"] --> H["x-client-id header<br/>RTK Query"]
+        LS --> Q["clientId query<br/>EventSource stream"]
+    end
+
+    subgraph Caches
+        C1["IndexedDB<br/>PDF binary by documentId"]
+        C2["RTK Query tags<br/>Document · Message · AIArtifact"]
+        C3["Postgres ai_artifacts<br/>unique documentId + type"]
+    end
+
+    H --> API["API ownership checks<br/>on list / get / delete / stream"]
+    Q --> API
+    C1 --> PDF["PDFViewer"]
+    C2 --> UI["Lists · chat history"]
+    C3 --> CMD["Commands"]
+```
+
+---
+
+## 🗄️ Data & Vector Model
+
+### Entity-relationship diagram
 
 ```mermaid
 erDiagram
-    Document ||--o{ Chunk : "contains (1:N)"
-    Document ||--o{ Message : "has (1:N)"
-    Document ||--o{ AIArtifact : "caches (1:N)"
+    Document ||--o{ Chunk : contains
+    Document ||--o{ Message : has
+    Document ||--o{ AIArtifact : caches
 
     Document {
         Int id PK
@@ -178,7 +260,7 @@ erDiagram
         String fileName
         Int fileSize
         Int pageCount
-        String status "pending | processing | completed | failed | ocr_required"
+        String status
         String errorMsg
         String clientId
         DateTime createdAt
@@ -196,7 +278,7 @@ erDiagram
     Message {
         Int id PK
         Int documentId FK
-        String role "user | assistant | system"
+        String role
         String content
         DateTime createdAt
     }
@@ -204,40 +286,86 @@ erDiagram
     AIArtifact {
         Int id PK
         Int documentId FK
-        String type "summary | key_points | insights"
+        String type
         String content
         DateTime createdAt
         DateTime updatedAt
     }
 ```
 
-### Pinecone Vector Namespace Architecture
+**Document status machine:** `pending` → `processing` → `completed` | `failed` | `ocr_required`
 
-- **Index Name**: `dociq`
-- **Vector Dimension**: `768` (Matching `text-embedding-004` output vectors)
-- **Distance Metric**: `Cosine Similarity`
-- **Record Key Format**: `doc_{documentId}_chunk_{chunkIndex}`
-- **Namespace Strategy**: Multi-tenant client isolation via `clientId` namespace partition (`index.namespace(clientId)`).
+### Pinecone layout
+
+| Setting | Value |
+| :------ | :---- |
+| Index name | `dociq` (hard-coded in service) |
+| Typical dimension | ~768 (aligned with Gemini embedding output; index stats used on delete) |
+| Similarity | Cosine |
+| Vector ID | `doc_{documentId}_chunk_{chunkIndex}` |
+| Isolation | `index.namespace(clientId)` when `clientId` is present |
+| Query filter | `documentId` equality + top-K (default **5**) |
 
 ---
 
-## 🛠️ Complete Tech Stack Matrix
+## 🔌 API Reference
 
-| Layer                   | Technology                         | Version           | Purpose & Architectural Justification                                                |
-| :---------------------- | :--------------------------------- | :---------------- | :----------------------------------------------------------------------------------- |
-| **Frontend Core**       | React                              | `^19.2.7`         | Cutting-edge concurrent rendering and state handling.                                |
-| **Build Tooling**       | Vite                               | `^8.1.1`          | Instant server start, lightning-fast HMR, optimized production build.                |
-| **Language**            | TypeScript                         | `^5.8.3`          | Strict type safety across client, server, and database DTOs.                         |
-| **State Management**    | Redux Toolkit & RTK Query          | `^2.12.0`         | Centralized state with built-in API caching, polling, and invalidation.              |
-| **Styling & UI**        | Tailwind CSS v4 + Radix UI         | `^4.3.2`          | Design system with glassmorphic tokens, accessible primitives, and dark mode.        |
-| **PDF Renderer**        | React-PDF                          | `^10.4.1`         | Canvas-based PDF client rendering with zoom & maximize support.                      |
-| **Browser Storage**     | IDB (IndexedDB)                    | `^8.0.3`          | Client-side persistent storage for raw PDF blobs to eliminate re-downloads.          |
-| **Backend Core**        | Node.js + Express                  | `v22+` / `^5.1.0` | Modern HTTP framework with native promise middleware & async route handling.         |
-| **ORM & Relational DB** | Prisma + PostgreSQL                | `^6.9.0`          | Strongly-typed SQL query builder, automatic migrations, and schema validation.       |
-| **Vector Database**     | Pinecone Client                    | `^8.0.0`          | Enterprise serverless vector database for sub-second similarity lookup.              |
-| **AI LLM SDK**          | @google/generative-ai              | `^0.24.1`         | Native SDK for Gemini models and batch text embedding generation.                    |
-| **PDF Extraction**      | unpdf                              | `^1.6.2`          | Lightweight server-side text extraction engine built on PDF.js core.                 |
-| **Security & Logging**  | Helmet + Express Rate Limit + Pino | Latest            | Production HTTP security headers, DDoS rate protection, and structured JSON logging. |
+Base path: **`/api`**.  
+Envelope (JSON endpoints):
+
+```ts
+{ success: boolean; data?: T; error?: string; message?: string; details?: unknown }
+```
+
+Identity is optional/required per route via header **`x-client-id`** (also accepted as `clientId` query/body). There is no password/session auth — this is a portfolio-friendly anonymous client model.
+
+### Documents — `/api/documents`
+
+| Method | Path | Auth | Description |
+| :----- | :--- | :--- | :---------- |
+| `POST` | `/api/documents` | `clientId` attached if present | Upload PDF (`multipart`, field `file`). Runs full processing before `201` |
+| `GET` | `/api/documents` | Required for non-empty list | List documents for caller (`[]` if no `clientId`) |
+| `GET` | `/api/documents/:id` | If `clientId` set, must match | Document metadata |
+| `DELETE` | `/api/documents/:id` | Same ownership rule | Deletes Postgres row (cascade) + Pinecone vectors |
+
+### Chat — `/api/documents/:documentId/chat`
+
+AI routes also use **`aiLimiter`** (20 req/min/IP) on top of the global limiter.
+
+| Method | Path | Auth | Description |
+| :----- | :--- | :--- | :---------- |
+| `GET` | `/api/documents/:documentId/chat` | Document must exist | Message history (ascending) |
+| `POST` | `/api/documents/:documentId/chat` | Ownership enforced | Non-streaming completion `{ message }` — implemented; **UI uses stream** |
+| `GET` | `/api/documents/:documentId/chat/stream` | Ownership enforced | **SSE stream** — query: `message`, optional `clientId` |
+
+**SSE contract:** `data: "<token chunk>"` events, then `data: [DONE]`. Errors: `data: {"error":"..."}`.
+
+### Commands — `/api/commands`
+
+| Method | Path | Body | Description |
+| :----- | :--- | :--- | :---------- |
+| `POST` | `/api/commands` | `{ documentId, command, regenerate? }` | Generate or return cached artifact |
+
+**Primary UI commands:** `summary` | `key_points` | `insights`  
+(Schema also accepts additional types for future expansion.)
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Role in DocIQ |
+| :---- | :--------- | :------------ |
+| Frontend | React 19, TypeScript, Vite 8 | App UI + routing |
+| State / data | Redux Toolkit, RTK Query | Server-state cache & invalidation |
+| Styling | Tailwind CSS v4, Radix / shadcn, Framer Motion | “Glacier” design system + motion |
+| PDF UI | react-pdf, idb | Canvas render + local binary cache |
+| Backend | Node 22+, Express 5 | REST + SSE API |
+| ORM / DB | Prisma 6, PostgreSQL (e.g. Supabase) | Relational source of truth |
+| Vectors | Pinecone | Semantic retrieval |
+| LLM | `@google/generative-ai` (Gemini) | Chat, stream, embeddings |
+| Extraction | unpdf | Server-side PDF text |
+| Validation / ops | Zod, Helmet, express-rate-limit, Pino | Contracts, security headers, limits, logs |
+| Deploy | Vercel (client SPA + serverless API, `maxDuration` 60s) | Live demo hosting |
 
 ---
 
@@ -245,155 +373,104 @@ erDiagram
 
 ```
 ai-pdf-intelligence/
-├── client/                      # React 19 Frontend Workspace
+├── client/                         # React 19 workspace
 │   ├── src/
-│   │   ├── api/                 # RTK Query API slices (documentApi, chatApi, commandApi)
+│   │   ├── api/                    # RTK Query: baseApi, document, chat, command
 │   │   ├── components/
-│   │   │   ├── chat/            # ChatInterface, ChatInput, ChatMessage components
-│   │   │   ├── documents/       # PDFViewer, UploadDropzone, MetadataPanel, DocumentCard
-│   │   │   ├── layout/          # Header, Main Layout wrapper
-│   │   │   └── ui/              # Radix UI primitives & custom styled components
-│   │   ├── pages/               # HomePage, DocumentPage
-│   │   ├── services/            # pdfStorage.ts (IndexedDB binary manager)
-│   │   ├── store/               # Redux store configuration and custom hooks
-│   │   └── types/               # TypeScript interfaces & API payload types
-│   ├── package.json
-│   └── vite.config.ts
+│   │   │   ├── chat/               # ChatInterface, ChatInput, ChatMessage
+│   │   │   ├── documents/          # Cards, toolbar, PDFViewer, upload, DocumentHeader
+│   │   │   ├── layout/             # AppSidebar, TopBar, Layout, PageTransition, mobile sheet
+│   │   │   ├── command-palette.tsx # ⌘K navigation
+│   │   │   ├── theme-provider.tsx
+│   │   │   └── ui/                 # shadcn/Radix primitives
+│   │   ├── context/                # AuthContext (clientId)
+│   │   ├── hooks/                  # useChat, useMediaQuery, useRecentDocuments
+│   │   ├── pages/                  # HomePage, DocumentPage
+│   │   ├── services/               # pdfStorage (IndexedDB)
+│   │   ├── store/                  # Redux store + typed hooks
+│   │   └── types/
+│   ├── vite.config.ts              # Dev proxy /api → :3001
+│   └── package.json
 │
-├── server/                      # Node.js Express 5 Backend Workspace
-│   ├── prisma/
-│   │   └── schema.prisma        # Database schema definitions & indices
+├── server/                         # Express 5 workspace
+│   ├── prisma/schema.prisma
 │   ├── src/
-│   │   ├── ai/                  # AI service layer & Gemini provider implementation
-│   │   │   ├── providers/       # GeminiProvider with failover resilience
-│   │   │   └── prompts/         # Prompt templates for QA, Summary, Key Points, Insights
-│   │   ├── controllers/         # HTTP Controller handlers (Document, Chat, Command)
-│   │   ├── middlewares/         # Validation (Zod), Upload, Rate Limiter, Error Handler
-│   │   ├── repositories/        # Database access layer (Document, Chunk, Message, Artifact)
-│   │   ├── routes/              # Express API route declarations
-│   │   ├── services/            # Core business logic (Processing, RAG Chat, Pinecone, Command)
-│   │   ├── utils/               # Text chunker, Pino logger, environment helpers
-│   │   ├── app.ts               # Express application configuration
-│   │   └── index.ts             # Server entry point & port listener
-│   ├── package.json
-│   └── tsconfig.json
+│   │   ├── ai/                     # AI service, Gemini provider, prompt templates
+│   │   ├── controllers/            # document, chat, command
+│   │   ├── middlewares/            # upload, validation, rate-limit, errors
+│   │   ├── repositories/           # Prisma data access only
+│   │   ├── routes/
+│   │   ├── services/               # document, processing, chat, command, pinecone
+│   │   ├── workers/processor.ts    # In-process processing entry (not a job queue)
+│   │   ├── utils/                  # chunker, logger, async-handler
+│   │   ├── app.ts
+│   │   └── index.ts
+│   └── package.json
 │
-├── package.json                 # Monorepo root configuration (NPM Workspaces)
-└── README.md                    # Platform Documentation
+├── package.json                    # npm workspaces root
+└── README.md
 ```
 
 ---
 
-## 🔌 API Endpoint Specifications
+## ⚡ Local Setup
 
-### 📄 Document Management API (`/api/documents`)
+### Prerequisites
 
-| Method   | Endpoint                | Description                                             | Request Payload / Params             |
-| :------- | :---------------------- | :------------------------------------------------------ | :----------------------------------- |
-| `POST`   | `/api/documents/upload` | Upload PDF file and trigger processing pipeline.        | `multipart/form-data` (`file: File`) |
-| `GET`    | `/api/documents`        | List all processed documents for the client.            | Headers: `x-client-id`               |
-| `GET`    | `/api/documents/:id`    | Get metadata and status for a specific document.        | Params: `id: number`                 |
-| `DELETE` | `/api/documents/:id`    | Purge document, database records, and Pinecone vectors. | Params: `id: number`                 |
+- **Node.js** ≥ 22  
+- **npm** ≥ 10  
+- **PostgreSQL** (local or hosted — Supabase/Neon work well)  
+- [Pinecone](https://www.pinecone.io/) API key + index named **`dociq`**  
+- [Google AI Studio](https://aistudio.google.com/) Gemini API key  
 
-### 💬 RAG Chat API (`/api/chat`)
-
-| Method | Endpoint                        | Description                                      | Request Payload / Params     |
-| :----- | :------------------------------ | :----------------------------------------------- | :--------------------------- |
-| `POST` | `/api/chat/:documentId`         | Send query and get full completion answer.       | `{ "message": "string" }`    |
-| `POST` | `/api/chat/:documentId/stream`  | Send query and stream token response via SSE.    | `{ "message": "string" }`    |
-| `GET`  | `/api/chat/:documentId/history` | Retrieve full chat message history for document. | Params: `documentId: number` |
-
-### ⚡ AI Commands API (`/api/commands`)
-
-| Method | Endpoint                    | Description                                                        | Request Payload / Params                        |
-| :----- | :-------------------------- | :----------------------------------------------------------------- | :---------------------------------------------- |
-| `POST` | `/api/commands/:documentId` | Trigger one-click AI action (`summary`, `key_points`, `insights`). | `{ "command": "summary", "regenerate": false }` |
-
----
-
-## 🛡️ Security, Performance & Optimization Engineering
-
-1. **Client-Side Binary Caching**: When a user uploads a PDF, the raw binary blob is stored locally inside the browser's **IndexedDB**. Re-visiting a document loads the PDF instantly without performing network downloads.
-2. **Context Window Optimization**: Queries do not blindly send full document contents to the LLM. Vector search retrieves only the **Top 5 most semantically relevant chunks**, keeping prompt token counts lean, lowering costs, and preventing context window truncation.
-3. **Smart Database Cache Invalidation**: RTK Query on the frontend tags data with automated tag invalidation (`Documents`, `Messages`, `Artifacts`). Uploading or deleting a document triggers surgical state refetches across all open views.
-4. **DDoS Protection & Rate Limiting**: Server endpoints are protected by `express-rate-limit` (100 requests per 15-minute window per IP) and strict file size limits (50 MB cap).
-
----
-
-## ⚡ Step-by-Step Local Setup Guide
-
-Follow this guide to get **DocIQ** running locally on your machine in less than 5 minutes.
-
-### 📋 Prerequisites
-
-- **Node.js**: `v22.0.0` or higher
-- **NPM**: `v10.0.0` or higher
-- **PostgreSQL Database**: A running PostgreSQL instance (Local or Cloud provider like Supabase / Neon)
-- **Pinecone Account**: A free [Pinecone](https://www.pinecone.io/) Account & API Key
-- **Google AI Studio Account**: A free [Gemini API Key](https://aistudio.google.com/)
-
----
-
-### 1️⃣ Step 1: Clone Repository
+### 1. Clone & install
 
 ```bash
 git clone https://github.com/harsh18082001/ai-pdf-intelligence.git
 cd ai-pdf-intelligence
+npm install
 ```
 
----
-
-### 2️⃣ Step 2: Configure Environment Variables
-
-#### Backend Environment Setup (`server/.env`)
-
-Create a `.env` file inside the `server/` directory:
+### 2. Backend environment (`server/.env`)
 
 ```bash
 cp server/.env.example server/.env
 ```
 
-Edit `server/.env` with your credentials:
-
 ```env
-# Server Port & Mode
-PORT=3000
+PORT=3001
 NODE_ENV=development
 
-# Database Connection (PostgreSQL)
-DATABASE_URL="postgresql://postgres:your_password@localhost:5432/dociq?schema=public"
+# PostgreSQL
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DB?schema=public"
 
-# Pinecone Vector DB Configuration
-PINECONE_API_KEY="your_pinecone_api_key_here"
+# Google Gemini
+GEMINI_API_KEY="your_gemini_api_key"
+# Optional overrides (defaults exist in code):
+# GEMINI_CHAT_MODEL=gemini-flash-latest
+# GEMINI_EMBEDDING_MODEL=gemini-embedding-2
 
-# Google Gemini AI Configuration
-GEMINI_API_KEY="your_gemini_api_key_here"
-GEMINI_CHAT_MODEL="gemini-1.5-flash"
-GEMINI_EMBEDDING_MODEL="text-embedding-004"
+# Pinecone
+PINECONE_API_KEY="your_pinecone_api_key"
+PINECONE_INDEX_HOST="https://your-index-host.pinecone.io"
 
-# Upload Limits
+# Optional
 MAX_FILE_SIZE_MB=50
+LOG_LEVEL=info
 ```
 
-#### Frontend Environment Setup (`client/.env`)
+### 3. Frontend environment (`client/.env`) — optional in local dev
 
-Create a `.env` file inside the `client/` directory:
+Vite proxies `/api` → `http://localhost:3001`, so the default base URL works without a file:
 
 ```env
-VITE_API_BASE_URL="http://localhost:3000/api"
+# Optional — defaults to "/api"
+VITE_API_URL=/api
 ```
 
----
+> Use an absolute URL (e.g. `http://localhost:3001/api`) only if you bypass the Vite proxy.
 
-### 3️⃣ Step 3: Install Dependencies & Run Database Migrations
-
-Run from the root directory to install all monorepo dependencies across client and server:
-
-```bash
-npm install
-```
-
-Initialize PostgreSQL schema and generate Prisma Client:
+### 4. Database
 
 ```bash
 cd server
@@ -402,53 +479,91 @@ npx prisma generate
 cd ..
 ```
 
----
-
-### 4️⃣ Step 4: Start Development Servers
-
-Start both frontend and backend concurrently from the root directory:
+### 5. Run
 
 ```bash
 npm run dev
 ```
 
-- **Frontend Client**: Runs at `http://localhost:5173`
-- **Backend API**: Runs at `http://localhost:3000`
-
----
-
-### 5️⃣ Step 5: Verification & Production Build
-
-To verify code quality and build production artifacts:
+| Process | URL |
+| :------ | :-- |
+| Client | http://localhost:5173 |
+| API | http://localhost:3001 |
 
 ```bash
-# Run linters across workspaces
 npm run lint
-
-# Build production bundles
 npm run build
 ```
 
 ---
 
-## 👨‍💻 Skill Highlights & Senior Technical Evaluation
+## 🛡️ Security & Performance
 
-This project highlights competencies expected of a **Senior / Lead AI Fullstack Engineer (30 LPA+ Standard)**:
+```mermaid
+mindmap
+  root((DocIQ hardening))
+    Gateway
+      Helmet headers
+      CORS credentials
+      Global rate limit 100 / 15 min
+      AI rate limit 20 / min
+      Max upload 50 MB PDF-only
+    Data isolation
+      clientId on documents
+      Pinecone namespaces
+      Ownership checks on mutate / stream
+    Cost & latency
+      Top-K retrieval not full-doc prompts
+      Artifact cache in Postgres
+      RTK tag invalidation
+      IndexedDB PDF cache
+    Reliability
+      Zod env + request validation
+      Central error middleware
+      LLM multi-model fallback
+      Graceful SIGTERM/SIGINT shutdown
+```
 
-1. **Production RAG Architecture**: Designed from scratch using vector embeddings, cosine distance filtering, and context window assembly rather than relying on black-box wrappers.
-2. **Resilient System Design**: Implemented automated API fallbacks to ensure high availability during third-party LLM rate-limiting outages.
-3. **State Management & Caching Expertise**: Multi-tier caching strategy across client IndexedDB, RTK Query, and server PostgreSQL storage.
-4. **Database & Vector Modeling**: Schema design with relational integrity, indices, foreign key cascades, and vector space partitioning.
-5. **Modern Tech Stack Mastery**: Native use of React 19, Express 5, TypeScript strict mode, Tailwind v4, Vite 8, and Node 22.
+1. **Context discipline** — Chat sends only top-K chunks + short history, not the entire document.  
+2. **Cache layers** — Artifacts and RTK tags cut repeat network/LLM work; IndexedDB avoids re-shipping PDFs on the same device.  
+3. **Upload size & type gates** — PDF-only middleware + configurable MB cap.  
+4. **Structured errors** — Operational `AppError` / Zod / upload errors map to a consistent JSON shape (SSE path handles errors in-band).
+
+---
+
+## 🧠 Design Decisions
+
+| Decision | Rationale |
+| :------- | :-------- |
+| **Sync processing on upload** | Serverless functions die after the response; awaiting the pipeline keeps indexing reliable on Vercel (`maxDuration` 60s) without a separate worker. |
+| **No server PDF binary store** | Extracted text + vectors are enough for AI; raw bytes stay in the browser for preview (re-attach if opened on another device). |
+| **Anonymous `clientId`** | Zero-friction demo identity; documents scoped for list/get/delete/stream without full OAuth for a public portfolio deploy. |
+| **SSE over WebSockets** | One-way token stream fits chat generation; works cleanly with `EventSource` and HTTP edge deploy. |
+| **Repository boundary** | Only repositories touch Prisma; services stay testable and free of query sprawl. |
+| **Pinned `react-resizable-panels` v2** | shadcn resizable recipe targets the classic API; v4 is a breaking rewrite. |
+
+---
+
+## 👨‍💻 Engineering Highlights
+
+Skills this project is meant to demonstrate in a hiring context:
+
+1. **End-to-end RAG systems** — chunking, embeddings, vector filters, prompt assembly, grounded generation.  
+2. **Full-stack TypeScript** — shared DTO mindset, Express 5 API, React 19 UI, Prisma schema design.  
+3. **Streaming UX** — SSE + optimistic UI + cache invalidation after persistence.  
+4. **Resilience** — provider failover, rate limits, validated config, graceful shutdown.  
+5. **Product polish** — command palette, sidebar shell, status model, Markdown AI output, dark/light theme.  
+6. **Deploy awareness** — monorepo workspaces, Vite proxy, Vercel SPA + serverless API constraints.
 
 ---
 
 ## 📜 License
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
+MIT — feel free to fork for learning. If you ship a derivative, attribution is appreciated.
 
 ---
 
-<p center="text-center">
-  Crafted with precision for enterprise AI document intelligence.
+<p align="center">
+  <b>DocIQ</b> — from PDF bytes to grounded answers.<br/>
+  Built as a portfolio-grade full-stack + AI systems project.
 </p>
