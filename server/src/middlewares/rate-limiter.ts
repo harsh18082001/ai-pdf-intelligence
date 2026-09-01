@@ -21,3 +21,16 @@ export const aiLimiter = rateLimit({
   standardHeaders: 'draft-8',
   legacyHeaders: false,
 });
+
+/** Strict limiter for register/login/forgot-password — slows down credential-stuffing/brute-force. */
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 10, // 10 attempts per IP per window
+  message: {
+    success: false,
+    error: 'Too many auth requests from this IP, please try again later.',
+  },
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+});

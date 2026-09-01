@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { uploadPdf } from '../middlewares/upload.js';
 import { asyncHandler } from '../utils/async-handler.js';
-import { validate, idParamSchema } from '../middlewares/validation.js';
 import {
   uploadDocument,
   listDocuments,
+  listRecentDocuments,
   getDocument,
+  getDocumentFileUrl,
   deleteDocument,
 } from '../controllers/document.controller.js';
 
@@ -17,7 +18,9 @@ const router = Router();
 
 router.post('/', uploadPdf, asyncHandler(uploadDocument));
 router.get('/', asyncHandler(listDocuments));
+router.get('/recent', asyncHandler(listRecentDocuments));
 router.get('/:id', asyncHandler(getDocument));
+router.get('/:id/file', asyncHandler(getDocumentFileUrl));
 router.delete('/:id', asyncHandler(deleteDocument));
 
 export default router;

@@ -9,17 +9,19 @@ Zod-based request body validation middleware, plus the three schemas used across
 - `chatMessageSchema = z.object({ message: z.string().min(1).max(5000) })` — used by [[chat.routes]] on `POST /`.
 - `commandSchema = z.object({ documentId: z.number().int().positive(), command: z.string().refine(val => ARTIFACT_TYPES.includes(val)), regenerate: z.boolean().optional() })` — used by [[command.routes]].
 - `idParamSchema = z.object({ id: z.string().regex(/^\d+$/) })` — defined but **not currently wired into any route's middleware chain**; [[document.routes]] imports it but never calls `validate(idParamSchema)` (ID params are checked manually in controllers instead, since `validate()` only reads `req.body`, not `req.params`).
+- Auth schemas (**new**, used by [[auth.routes]]): `registerSchema` (`email`, `password` — min 10 chars + upper/lower/digit via a shared `passwordSchema`, optional `name`), `loginSchema` (`email`, `password` — no complexity check on login, only on set), `forgotPasswordSchema`/`resendVerificationSchema` (`email` only), `resetPasswordSchema` (`token`, `password`).
 
 ## Source
 `server/src/middlewares/validation.ts`
 
 ## Dependencies
 - Imports: `zod`, `ARTIFACT_TYPES` constant.
-- Used by: [[chat.routes]] (`chatMessageSchema`), [[command.routes]] (`commandSchema`).
+- Used by: [[chat.routes]] (`chatMessageSchema`), [[command.routes]] (`commandSchema`), [[auth.routes]] (the five auth schemas).
 
 ## Related
 - [[chat.routes]]
 - [[command.routes]]
+- [[auth.routes]]
 - [[document.routes]]
 - [[API-Contract]]
 

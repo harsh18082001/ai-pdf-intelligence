@@ -6,7 +6,7 @@ The document ingestion pipeline: extract text → OCR-check → chunk → embed 
 
 ## Key Details
 - `class ProcessingService`, singleton export `processingService`.
-- `processDocument(documentId, fileBuffer: Buffer, clientId?): Promise<void>` — wraps the entire pipeline in one `try/catch`; **any thrown error results in `documentRepository.updateStatus(documentId, FAILED, error.message)`** rather than propagating, so callers never see a rejected promise reflecting pipeline failure (only pre-pipeline errors like a missing document would throw synchronously before the try block — in practice there are none, so this method effectively never rejects).
+- `processDocument(documentId, fileBuffer: Buffer, owner: RequestOwner): Promise<void>` — wraps the entire pipeline in one `try/catch`; **any thrown error results in `documentRepository.updateStatus(documentId, FAILED, error.message)`** rather than propagating, so callers never see a rejected promise reflecting pipeline failure (only pre-pipeline errors like a missing document would throw synchronously before the try block — in practice there are none, so this method effectively never rejects).
 - Steps inside the try:
   1. `documentRepository.updateStatus(documentId, PROCESSING)`.
   2. Re-fetch the document; throw `Error` (caught below) if somehow not found.
@@ -15,7 +15,7 @@ The document ingestion pipeline: extract text → OCR-check → chunk → embed 
   5. `chunkText(text)` from [[processor|utils/chunker.ts]] (default `CHUNK_SIZE=512`, `CHUNK_OVERLAP=50`).
   6. `aiService.generateEmbeddings(texts)` — one embedding call for all chunk texts at once (Gemini's `batchEmbedContents` under the hood via [[gemini.provider]]).
   7. `chunkRepository.createMany(documentId, dbChunks)` — chunk text/tokenCount/index only, no embeddings, into Postgres.
-  8. `pineconeService.upsertChunks(documentId, pineconeChunks, clientId)` — chunk text + embedding + index, into Pinecone (namespaced by `clientId` if present).
+  8. `pineconeService.upsertChunks(documentId, pineconeChunks, ownerNamespace(owner))` — chunk text + embedding + index, into Pinecone, namespaced by `ownerNamespace(owner)` (`utils/owner.ts`) rather than a raw `clientId`.
   9. `documentRepository.updateProcessingResult(documentId, { pageCount: totalPages, status: COMPLETED })`.
 - On any exception: logs it, sets `status: FAILED` with `error.message` as `errorMsg`.
 

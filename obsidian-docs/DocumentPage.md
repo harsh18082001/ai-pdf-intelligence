@@ -13,14 +13,15 @@ Document detail view / workspace: a compact header, chat, and the PDF viewer.
 - Layout is responsive via [[useMediaQuery]] (`(min-width: 1024px)`, the same breakpoint as Tailwind's `lg`), not pure CSS: at desktop width, [[ChatInterface]] alone and [[PDFViewer]] sit in a draggable `ResizablePanelGroup` (`components/ui/resizable.tsx`, `direction="horizontal"`, left panel `defaultSize={42}` `minSize={28}` `maxSize={55}`); below that width it falls back to a stacked flex-col (chat, then a fixed `h-[600px]` PDF viewer) — resizable panels aren't used on mobile at all, by design.
   - **Chat gets the entire left pane by itself** — this is the fix for user feedback that the workspace looked "compressed"/"congested": the previous layout stacked a card-based metadata panel *above* chat inside that same narrow pane, squeezing both. Now only [[ChatInterface]] occupies it, so its message list has the full pane height to itself. See [[Known-Issues-and-Conventions#DocumentPage was rebuilt because the workspace felt "compressed" (congestion feedback)]].
 - The page root is no longer inside a `container mx-auto` max-width wrapper — it's full-bleed within the sidebar layout (`h-full flex flex-col`), unlike [[HomePage]] which keeps its `container max-w-7xl`. Deliberate: a working document view should use the available width; a dashboard grid reads better constrained.
-- Calls `useRecentDocuments().recordVisit(documentId, document.title)` in a `useEffect` once the document's title is available — this is what feeds [[AppSidebar]]'s "Recent" list (localStorage-backed, see [[recent-documents]]).
+- **No longer calls `useRecentDocuments()` at all.** Recording a visit is now a side effect of the `getDocument` fetch itself (server-side `touchAccessed`, see [[document.service]]) — [[AppSidebar]]'s "Recent" list is fed by a separate query ([[useRecentDocuments]] → `GET /api/documents/recent`), not anything this page does explicitly.
+- Sets `document.title`/`noindex` via [[useDocumentHead]] (a small hand-rolled hook, not `react-helmet-async` — see [[Known-Issues-and-Conventions#`react-helmet-async` doesn't support React 19 — don't try to reinstall it]]) since document content is private per-owner and should never be indexed.
 - Route: `/documents/:id`, defined in `App.tsx`.
 
 ## Source
 `client/src/pages/DocumentPage.tsx`
 
 ## Dependencies
-- Imports: [[documentApi]] (`useGetDocumentQuery`), [[DocumentHeader]], [[PDFViewer]], [[ChatInterface]], [[EmptyState]], `ResizablePanelGroup`/`ResizablePanel`/`ResizableHandle` (`components/ui/resizable.tsx`), [[useMediaQuery]], [[useRecentDocuments]].
+- Imports: [[documentApi]] (`useGetDocumentQuery`), [[DocumentHeader]], [[PDFViewer]], [[ChatInterface]], [[EmptyState]], `ResizablePanelGroup`/`ResizablePanel`/`ResizableHandle` (`components/ui/resizable.tsx`), [[useMediaQuery]], [[useDocumentHead]].
 - Rendered by: `App.tsx` route `documents/:id`, inside [[Layout]].
 
 ## Related

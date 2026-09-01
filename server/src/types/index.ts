@@ -11,6 +11,10 @@ export interface PaginationParams {
   limit: number;
 }
 
+export type RequestOwner =
+  | { type: 'user'; id: string; email: string; name: string | null; role: string }
+  | { type: 'guest'; id: string };
+
 export interface DocumentDTO {
   id: number;
   title: string;
@@ -18,8 +22,17 @@ export interface DocumentDTO {
   fileSize: number;
   pageCount: number;
   status: string;
+  lastAccessedAt: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface UserDTO {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
+  emailVerified: boolean;
 }
 
 export interface MessageDTO {

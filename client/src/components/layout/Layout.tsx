@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { TopBar } from './TopBar';
 import { PageTransition } from './PageTransition';
-import { Toaster } from '@/components/ui/sonner';
 
 export function Layout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -22,7 +21,6 @@ export function Layout() {
           <PageTransition />
         </main>
       </div>
-      <Toaster position="bottom-right" />
     </div>
   );
 }

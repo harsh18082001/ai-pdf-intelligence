@@ -4,11 +4,13 @@ import { chunkRepository } from '../repositories/chunk.repository.js';
 import { aiService } from '../ai/ai.service.js';
 import { chunkText } from '../utils/chunker.js';
 import { pineconeService } from './pinecone.service.js';
+import { ownerNamespace } from '../utils/owner.js';
 import { logger } from '../utils/logger.js';
 import { DOCUMENT_STATUS } from '../config/constants.js';
+import type { RequestOwner } from '../types/index.js';
 
 class ProcessingService {
-  async processDocument(documentId: number, fileBuffer: Buffer, clientId?: string): Promise<void> {
+  async processDocument(documentId: number, fileBuffer: Buffer, owner: RequestOwner): Promise<void> {
     try {
       // 1. Mark as processing
       await documentRepository.updateStatus(documentId, DOCUMENT_STATUS.PROCESSING);
@@ -58,7 +60,7 @@ class ProcessingService {
         text: chunk.text,
         embedding: embeddings[index]!,
       }));
-      await pineconeService.upsertChunks(documentId, pineconeChunks, clientId);
+      await pineconeService.upsertChunks(documentId, pineconeChunks, ownerNamespace(owner));
 
       // 8. Update document status
       await documentRepository.updateProcessingResult(documentId, {

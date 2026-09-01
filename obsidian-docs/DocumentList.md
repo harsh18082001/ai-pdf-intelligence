@@ -25,4 +25,4 @@ Fetches and renders the grid of the current user's documents, with loading/error
 - [[documentApi]]
 
 ## Notes
-Empty-list and "no documents match this client" (missing/failed `x-client-id`) still look identical (both hit the "No documents yet" branch) — see [[Known-Issues-and-Conventions]] on the `x-client-id` mechanism. That is now a *third*, visually distinct case from "no documents match the current search/filter", which has its own copy and no upload CTA.
+"No documents yet" now genuinely means the caller's owner (guest or user, always present post-auth-overhaul — see [[Auth-System]]) has zero documents; there's no more "missing/failed identity" case that used to look identical to a real empty list under the old `x-client-id` scheme. That's a distinct case from "no documents match the current search/filter", which has its own copy and no upload CTA.

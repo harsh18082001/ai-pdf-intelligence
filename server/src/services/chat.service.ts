@@ -2,16 +2,16 @@ import { documentRepository } from '../repositories/document.repository.js';
 import { messageRepository } from '../repositories/message.repository.js';
 import { aiService } from '../ai/ai.service.js';
 import { pineconeService } from './pinecone.service.js';
+import { ownerNamespace } from '../utils/owner.js';
 import { buildQAPrompt } from '../ai/prompts/templates.js';
 import { AppError } from '../middlewares/error-handler.js';
 import { TOP_K_CHUNKS, DOCUMENT_STATUS, MESSAGE_ROLES } from '../config/constants.js';
-import type { MessageDTO, StreamCallback } from '../types/index.js';
+import type { MessageDTO, StreamCallback, RequestOwner } from '../types/index.js';
 
 class ChatService {
-  private async prepareChat(documentId: number, userMessage: string, clientId?: string) {
-    const doc = await documentRepository.findById(documentId);
-    if (!doc || (clientId && doc.clientId !== clientId))
-      throw new AppError('Document not found', 404);
+  private async prepareChat(documentId: number, userMessage: string, owner: RequestOwner) {
+    const doc = await documentRepository.findOwnedById(documentId, owner);
+    if (!doc) throw new AppError('Document not found', 404);
     if (doc.status !== DOCUMENT_STATUS.COMPLETED) {
       throw new AppError('Document is not ready for chat. Current status: ' + doc.status, 400);
     }
@@ -31,7 +31,7 @@ class ChatService {
       documentId,
       queryEmbedding,
       TOP_K_CHUNKS,
-      clientId,
+      ownerNamespace(owner),
     );
     if (topChunks.length === 0) {
       throw new AppError('No document content available for context', 400);
@@ -56,8 +56,8 @@ class ChatService {
     return { messages };
   }
 
-  async sendMessage(documentId: number, userMessage: string, clientId?: string): Promise<string> {
-    const { messages } = await this.prepareChat(documentId, userMessage, clientId);
+  async sendMessage(documentId: number, userMessage: string, owner: RequestOwner): Promise<string> {
+    const { messages } = await this.prepareChat(documentId, userMessage, owner);
 
     // Call AI
     const assistantResponse = await aiService.chatCompletion({ messages });
@@ -76,9 +76,9 @@ class ChatService {
     documentId: number,
     userMessage: string,
     onChunk: StreamCallback,
-    clientId?: string,
+    owner: RequestOwner,
   ): Promise<string> {
-    const { messages } = await this.prepareChat(documentId, userMessage, clientId);
+    const { messages } = await this.prepareChat(documentId, userMessage, owner);
 
     const stream = aiService.chatCompletionStream({ messages });
 
@@ -98,8 +98,8 @@ class ChatService {
     return fullResponse;
   }
 
-  async getHistory(documentId: number): Promise<MessageDTO[]> {
-    const doc = await documentRepository.findById(documentId);
+  async getHistory(documentId: number, owner: RequestOwner): Promise<MessageDTO[]> {
+    const doc = await documentRepository.findOwnedById(documentId, owner);
     if (!doc) throw new AppError('Document not found', 404);
 
     const messages = await messageRepository.findByDocumentId(documentId);

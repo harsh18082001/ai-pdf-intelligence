@@ -2,24 +2,26 @@
 tags: [frontend, hook]
 ---
 ## Purpose
-React hook wrapper around the localStorage-backed [[recent-documents]] list — used to render and update the sidebar's "Recent" section.
+React hook that reads the server-tracked "recently viewed" list — used to render the sidebar's "Recent" section. **No longer localStorage-backed.**
 
 ## Key Details
-- `useRecentDocuments(): { recent: RecentDocument[], recordVisit: (id: number, title: string) => void }`.
-- `recent` initializes from `getRecentDocuments()` and re-syncs on the browser `storage` event (fires when localStorage changes in *another* tab/window — cross-tab consistency).
-- `recordVisit` calls `pushRecentDocument(id, title)` and updates local state with the result directly (same-tab updates don't rely on the `storage` event, which only fires for other tabs/windows, never the one that made the change).
+- `useRecentDocuments(): { recent: DocumentDTO[] }` — a thin wrapper around `useGetRecentDocumentsQuery()` ([[documentApi]]). That's the whole file now (down from a `getRecentDocuments`/`pushRecentDocument`/`storage`-event setup).
+- There's no `recordVisit` anymore — recording a visit happens automatically server-side, inside [[document.service]]`.getById` (`documentRepository.touchAccessed(id)`) whenever `GET /api/documents/:id` is called, i.e. whenever [[DocumentPage]] fetches the document. The old client-side "record a visit in a `useEffect`" call was removed from [[DocumentPage]] entirely.
+- Because it's an RTK Query hook, "Recent" now shares the same `['Document']` cache-invalidation as every other document query — no separate sync mechanism needed, and it updates across devices/browsers for a logged-in user (or the same guest session) instead of being stuck to one browser's localStorage.
 
 ## Source
 `client/src/hooks/useRecentDocuments.ts`
 
 ## Dependencies
-- Imports: [[recent-documents]] (`getRecentDocuments`, `pushRecentDocument`, `RecentDocument` type).
-- Used by: [[AppSidebar]] (reads `recent` to render the list), [[DocumentPage]] (calls `recordVisit` on document load).
+- Imports: [[documentApi]] (`useGetRecentDocumentsQuery`).
+- Used by: [[AppSidebar]] (reads `recent` to render the list).
 
 ## Related
-- [[recent-documents]]
+- [[documentApi]]
+- [[document.service]]
 - [[AppSidebar]]
 - [[DocumentPage]]
+- [[Known-Issues-and-Conventions#Auth is now real: email/password + server-issued guest sessions]]
 
 ## Notes
-Purely client-side/local-device — there is no server-side "recently viewed" concept, and this list does not sync across devices or browsers (consistent with how [[pdfStorage]]'s PDF cache also stays per-device).
+The deleted `client/src/lib/recent-documents.ts` module (localStorage key `dociq-recent-documents`, max 5 items, `{id, title, visitedAt}` shape) no longer exists — if you see a reference to it anywhere, it's stale. The server-side equivalent is `Document.lastAccessedAt` + [[document.repository]]`.findRecent(owner, limit)`, capped at 5 the same way, just owner-scoped instead of per-browser.

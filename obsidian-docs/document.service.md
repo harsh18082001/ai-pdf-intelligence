@@ -2,33 +2,38 @@
 tags: [backend, service]
 ---
 ## Purpose
-Business logic for document lifecycle: upload orchestration, listing, ownership-checked fetch/delete, DTO mapping.
+Business logic for document lifecycle: upload orchestration (including original-file storage), listing/recents, ownership-checked fetch/delete, DTO mapping.
 
 ## Key Details
-- `class DocumentService`, singleton export `documentService`. Local `toDTO(doc: Document): DocumentDTO` maps Prisma model → API shape (drops `clientId`, ISO-stringifies dates).
-- `upload(file: UploadedFile, clientId?): Promise<DocumentDTO>`:
-  1. `documentRepository.create({ title: file.name, fileName: file.name, fileSize: file.size, clientId })` — row starts `status: pending`.
-  2. `await processDocumentAsync(doc.id, file.data, clientId)` — **awaited synchronously**, i.e. the HTTP response does not return until the entire extraction/chunking/embedding/Pinecone pipeline finishes or fails (see [[processor]] Notes on why — Vercel serverless compatibility).
-  3. Re-fetches the document (`findById`) to get the final `status`/`pageCount` and returns its DTO.
-- `list(clientId?): Promise<DocumentDTO[]>` — `documentRepository.findAll(clientId)` (returns `[]` if no clientId), mapped to DTOs.
-- `getById(id, clientId?): Promise<DocumentDTO>` — fetch by id, then `if (!doc || (clientId && doc.clientId !== clientId)) throw AppError('Document not found', 404)`. **This is the ownership check** — note it only enforces the mismatch when a `clientId` was actually supplied by the caller; if `clientId` is `undefined` the check is skipped entirely and any document is returned.
-- `delete(id, clientId?): Promise<void>` — same ownership check, then `pineconeService.deleteByDocumentId(id, clientId)` **before** `documentRepository.delete(id)` (Postgres cascade handles chunks/messages/artifacts; Pinecone needs its own explicit delete call).
-- `getProcessingStatus(id, clientId?)` — same ownership-check pattern; returns `{ status, errorMsg }`. Not currently called from any controller (no polling endpoint exists — see [[API-Contract]]).
+- `class DocumentService`, singleton export `documentService`. Local `toDTO(doc: Document): DocumentDTO` maps Prisma model → API shape (adds `lastAccessedAt`, drops `userId`/`guestSessionId`/`storageKey`).
+- `upload(file: UploadedFile, owner: RequestOwner): Promise<DocumentDTO>`:
+  1. `b2StorageService.uploadPdf(file.data, file.name)` — uploads the original PDF to Backblaze B2 and returns a `storageKey` (or `null` if B2 isn't configured — see [[b2-storage.service]]).
+  2. `documentRepository.create({ title, fileName, fileSize, storageKey, owner })` — row starts `status: pending`, with `userId`/`guestSessionId` set from `owner.type`.
+  3. `await processDocumentAsync(doc.id, file.data, owner)` — **awaited synchronously** (Vercel serverless compatibility, see [[processor]]).
+  4. Re-fetches the document and returns its DTO.
+- `list(owner): Promise<DocumentDTO[]>` — `documentRepository.findAll(owner)`.
+- `listRecent(owner, limit = 5): Promise<DocumentDTO[]>` (**new**) — `documentRepository.findRecent(owner, limit)`, ordered by `lastAccessedAt desc`. Backs `GET /api/documents/recent`, replacing the old client-only localStorage recents list — see [[useRecentDocuments]].
+- `getById(id, owner): Promise<DocumentDTO>` — `documentRepository.findOwnedById(id, owner)` (throws 404 if not found *or* not owned — no bypass path), then **touches `lastAccessedAt`** (`documentRepository.touchAccessed(id)`) before returning. This is what makes "recent" tracking automatic: viewing a document is the only thing that updates it.
+- `getFileUrl(id, owner): Promise<string>` (**new**) — ownership-checked fetch, 404 if no `storageKey`, else a presigned URL from [[b2-storage.service]] (503 if B2 isn't configured).
+- `delete(id, owner): Promise<void>` — ownership-checked fetch, `pineconeService.deleteByDocumentId` + `b2StorageService.deletePdf` (if a `storageKey` exists) before `documentRepository.delete(id)`.
+- `getProcessingStatus(id, owner)` — same ownership-checked pattern; still not called from any controller (no polling endpoint wired up client-side).
+- `ownerNamespace(owner)` used to live in this file; it moved to `server/src/utils/owner.ts` to break a circular import ([[processing.service]] needs it too, and importing it from here created `document.service → processor → processing.service → document.service`).
 
 ## Source
 `server/src/services/document.service.ts`
 
 ## Dependencies
-- Imports: [[document.repository]], [[message.repository]] (imported, unused in this file — dead import), [[ai-artifact.repository]] (imported, unused — dead import), [[pinecone.service]], `processDocumentAsync` from [[processor|workers/processor.ts]], `AppError`, [[logger]] (imported, unused — dead import).
-- Called by: [[document.controller]] (all four public methods).
+- Imports: [[document.repository]], [[pinecone.service]], [[b2-storage.service]], `processDocumentAsync` from [[processor|workers/processor.ts]], `AppError`, `ownerNamespace` from `utils/owner.ts`.
+- Called by: [[document.controller]] (all public methods).
 
 ## Related
 - [[document.controller]]
 - [[document.repository]]
 - [[processor]]
 - [[pinecone.service]]
+- [[b2-storage.service]]
 - [[Data-Flow#1. Upload flow]]
-- [[Known-Issues-and-Conventions#Document queries must stay scoped per client]]
+- [[Known-Issues-and-Conventions#Document queries must stay scoped per owner (`RequestOwner`, not a raw string)]]
 
 ## Notes
-The ownership check pattern (`clientId && doc.clientId !== clientId`) means an **absent** `clientId` on the request bypasses tenant scoping entirely rather than failing closed — this is intentional-looking (supports anonymous/no-header callers) but means a request with a missing/stripped `x-client-id` header can read/delete *any* document by guessing its numeric ID. Don't "simplify" this check to always require a match; that would break callers that legitimately have no clientId, but be aware of the security implication if you touch it. See [[Known-Issues-and-Conventions]].
+Unlike the old `clientId && doc.clientId !== clientId` check (which **skipped** the comparison entirely when `clientId` was absent), `findOwnedById` always requires a match against `owner.id` for `owner.type` — there is no "no owner, allow anything" bypass anymore, because every request always has *some* owner (a guest, at minimum — see [[guest-session.middleware]]).

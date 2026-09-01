@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FileQuestion } from 'lucide-react';
 import { useGetDocumentQuery } from '@/api/documentApi';
@@ -7,7 +6,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { DocumentHeader } from '@/components/documents/DocumentHeader';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useRecentDocuments } from '@/hooks/useRecentDocuments';
+import { useDocumentHead } from '@/hooks/useDocumentHead';
 
 import { PDFViewer } from '@/components/documents/PDFViewer';
 import { ChatInterface } from '@/components/chat/ChatInterface';
@@ -17,17 +16,18 @@ export function DocumentPage() {
   const documentId = parseInt(id || '0', 10);
   const navigate = useNavigate();
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const { recordVisit } = useRecentDocuments();
 
+  // Fetching the document also marks it as recently accessed server-side (`lastAccessedAt`),
+  // so there's no separate client-side "record a visit" call needed anymore.
   const { data: document, isError } = useGetDocumentQuery(documentId, {
     skip: !documentId,
   });
 
-  useEffect(() => {
-    if (document?.title) {
-      recordVisit(documentId, document.title);
-    }
-  }, [documentId, document?.title, recordVisit]);
+  // Document content is private per-account/guest — never index it.
+  useDocumentHead({
+    title: document?.title ? `${document.title} — DocIQ` : 'DocIQ',
+    robots: 'noindex, nofollow',
+  });
 
   if (!documentId || isError) {
     return (

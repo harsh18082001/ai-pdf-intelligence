@@ -2,29 +2,31 @@
 tags: [frontend, auth]
 ---
 ## Purpose
-Generates and persists an anonymous per-browser `clientId` used as the app's entire identity/tenancy mechanism. **This is not Supabase Auth** — see Notes.
+React context that tracks the current session (logged-in user or guest) on the client. Restores the session on load by calling `/auth/refresh` against the httpOnly refresh cookie — **no token or identity is ever read from `localStorage`** (this replaced the old client-generated `clientId` scheme; see [[Known-Issues-and-Conventions#Auth is now real: email/password + server-issued guest sessions]]).
 
 ## Key Details
-- `getStoredClientId(): string` — reads `localStorage['dociq_client_id']`; if missing/blank, generates `'usr_' + crypto.randomUUID()` and stores it. Called once in `main.tsx` before the React tree renders (`getStoredClientId()` at module scope) so the ID exists before any API call, and again inside `AuthProvider`'s initial state.
-- `interface AuthContextType { clientId: string }`
-- `AuthProvider({ children })` — `useState(() => getStoredClientId())`, plus a mount-time `useEffect` that re-reads and re-sets (a no-op in practice since the ID already exists by then).
-- `useAuth()` — throws if used outside `AuthProvider`; returns `{ clientId }`.
-- Mounted in `main.tsx` innermost, wrapping `<App />`, inside `ThemeProvider`, inside `BrowserRouter`, inside the Redux `<Provider>`.
+- `interface AuthContextType { user: UserDTO | null; isGuest: boolean; isLoading: boolean; setUser; logout }`
+- `AuthProvider({ children })` — on mount, calls `useRefreshMutation()` once; success sets `user`, failure (no valid refresh cookie, i.e. a guest) leaves `user` as `null`. `isLoading` is true until that first refresh settles — [[TopBar]] uses it to avoid flashing "Log in" before the real state is known.
+- `logout()` — calls `/auth/logout` (revokes the session server-side, clears the refresh cookie) then clears local `user` state.
+- `useAuth()` — throws if used outside `AuthProvider`. Returns the object above.
+- Mounted in `main.tsx`, wrapping `<App />`.
 
 ## Source
 `client/src/context/AuthContext.tsx`
 
 ## Dependencies
-- Used by: `main.tsx` (provider mount + calls `getStoredClientId()` directly before render).
-- The `clientId` value itself is actually consumed on the network side by [[baseApi]] (reads `localStorage['dociq_client_id']` directly, not via `useAuth()`) and by [[useChat]] (same, for the `EventSource` URL).
-- Backend reads it as the `x-client-id` header (or `clientId` query/body) — see [[document.controller]], [[chat.controller]] `getClientId()`.
+- Used by: [[TopBar]] (login/signup buttons vs. user menu + logout), [[LoginPage]]/[[SignupPage]] (`setUser` after a successful call).
+- Calls: [[authApi]] (`useRefreshMutation`, `useLogoutMutation`).
+- The actual access token lives in `client/src/lib/token-store.ts` (module-scope variable, in-memory only) — [[baseApi]] reads it from there, not from this context.
 
 ## Related
+- [[authApi]]
 - [[baseApi]]
-- [[useChat]]
-- [[document.controller]]
+- [[TopBar]]
+- [[LoginPage]]
+- [[SignupPage]]
+- [[auth.service]]
 - [[Data-Flow#4. Auth / identity flow]]
-- [[Known-Issues-and-Conventions#Supabase client is installed but unused]]
 
 ## Notes
-**No component actually calls `useAuth()`** — every real consumer reads `localStorage.getItem('dociq_client_id')` directly instead of going through the context. The context/provider exist but are effectively vestigial; the localStorage key is the real source of truth. `lib/supabase.ts` and `lib/user.ts` are separate, **unused** files that look related to auth but are dead code (nothing imports them) — do not assume Supabase session auth is wired up anywhere in this app. If you add real Supabase auth later, this is the file to replace, and every direct `localStorage.getItem('dociq_client_id')` call site (`baseApi.ts`, `useChat.ts`) would need to move to reading from it instead.
+This file used to generate and own a `dociq_client_id` in `localStorage`; it no longer does. Identity for unauthenticated visitors ("guest mode") is now issued entirely server-side as a signed, httpOnly `dociq_guest_id` cookie (see [[guest-session.middleware]]) — the frontend has no code path that reads, writes, or forwards a client-chosen identity string anymore. `lib/supabase.ts` and `lib/user.ts` are still separate, unused dead files (unaffected by this change, not part of the real auth path) — don't assume Supabase session auth is wired up anywhere in this app.

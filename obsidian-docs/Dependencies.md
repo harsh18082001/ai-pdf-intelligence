@@ -40,10 +40,15 @@ Key third-party libraries on both sides and the specific reason each is used in 
 | `express-fileupload` | `^1.5.2` | Parses `multipart/form-data` uploads into `req.files`, in-memory (`useTempFiles: false`) — see [[upload]]. |
 | `express-rate-limit` | `^7.5.0` | IP-based request throttling — [[rate-limiter]]. |
 | `helmet` | `^8.1.0` | Sets security-related HTTP headers. |
-| `cors` | `^2.8.5` | CORS middleware (currently configured to reflect any origin — see [[ENV-Variables]] `CORS_ORIGIN` note). |
+| `cors` | `^2.8.5` | CORS middleware — now locked to `env.CORS_ORIGIN` (a single explicit origin), not the previous reflect-any-origin `origin: true` — see [[Known-Issues-and-Conventions]]. |
 | `pino`, `pino-pretty` | `^9.7.0` / `^13.0.0` | Structured JSON logging in production, human-readable in development — [[processor|utils/logger.ts]]. |
 | `dotenv` | `^16.5.0` | Loads `.env` files (from two candidate paths) before Zod validation in `config/env.ts`. |
-| `uuid` | `^11.1.0` | Listed as a dependency but **no import of `uuid` found** in `server/src` — client IDs are generated with the browser's native `crypto.randomUUID()` instead, client-side. Appears unused server-side. |
+| `uuid` | `^11.1.0` | **Now used** — [[b2-storage.service]] uses `v4()` to prefix Backblaze B2 storage keys and avoid filename collisions. (Was previously unused server-side; that's no longer true.) |
+| `argon2` | `^0.41.1` | Password hashing (Argon2id) for `User.passwordHash` — [[auth.service]]. |
+| `jsonwebtoken` | `^9.0.2` | Signs/verifies access and refresh JWTs — `utils/jwt.ts`. |
+| `cookie-parser` | `^1.4.7` | Parses the guest/refresh/CSRF cookies off every request — mounted in `app.ts` before [[guest-session.middleware]]. |
+| `nodemailer` | `^9.1.0` | Sends verification/password-reset emails via Gmail SMTP — [[email.service]]. |
+| `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` | `^3.700.0` | S3-compatible client for Backblaze B2 (original-PDF storage) — [[b2-storage.service]]. |
 | `jest`, `ts-jest`, `supertest` (dev) | — | Test tooling; `npm run test`/`test:integration` scripts exist in `package.json` but **no test files were found under `server/`** in this pass — tests may not yet be written. |
 
 ## Source
@@ -60,4 +65,4 @@ N/A (this note is itself the dependency reference).
 - [[processing.service]]
 
 ## Notes
-Three dependencies look plausibly unused from a repo-wide read: client's `next-themes` (real theme logic is hand-rolled in [[theme-provider]]), client's `@supabase/supabase-js` (see [[lib-supabase]]), and server's `uuid`. Verify with a fresh `grep` before removing any of them, since this was a single-pass read, not an exhaustive dependency-usage audit.
+Two dependencies still look plausibly unused from a repo-wide read: client's `next-themes` (real theme logic is hand-rolled in [[theme-provider]]) and client's `@supabase/supabase-js` (see [[lib-supabase]]) — unaffected by the auth overhaul. Server's `uuid` is **no longer** on that list (see the b2-storage row above). Verify with a fresh `grep` before removing any dependency, since this was a single-pass read, not an exhaustive dependency-usage audit. `react-helmet-async` was deliberately **not** added for the SEO pass — its peer range doesn't cover React 19; see [[useDocumentHead]] before reaching for a head-management library here.

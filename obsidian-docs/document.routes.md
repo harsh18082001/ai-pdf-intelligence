@@ -11,8 +11,12 @@ Mounted at `/documents` under the main router ([[routes-index|routes/index.ts]])
 |---|---|---|---|
 | POST | `/` | [[upload]] (`uploadPdf`) → `asyncHandler` | [[document.controller#uploadDocument]] |
 | GET | `/` | `asyncHandler` | [[document.controller#listDocuments]] |
+| GET | `/recent` | `asyncHandler` | [[document.controller#listRecentDocuments]] |
 | GET | `/:id` | `asyncHandler` | [[document.controller#getDocument]] |
+| GET | `/:id/file` | `asyncHandler` | [[document.controller#getDocumentFileUrl]] |
 | DELETE | `/:id` | `asyncHandler` | [[document.controller#deleteDocument]] |
+
+**Route order matters**: `/recent` is registered *before* `/:id`, or Express would match it as `GET /:id` with `id = "recent"`.
 
 No `chatMessageSchema`/Zod body validation on these routes — a code comment explicitly notes ID params aren't validated by [[validation]]'s middleware (which only validates `req.body`); instead each controller does `parseInt` + `isNaN` checks and throws `AppError('Invalid document ID', 400)` manually.
 

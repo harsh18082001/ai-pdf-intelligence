@@ -2,28 +2,31 @@
 tags: [backend, repository]
 ---
 ## Purpose
-Direct Prisma access for the `Document` table — no business logic, no auth checks.
+Direct Prisma access for the `Document` table — no business logic, ownership checks are explicit single-purpose methods rather than implicit in every query.
 
 ## Key Details
 - `class DocumentRepository`, singleton export `documentRepository`.
-- `create(data: { title, fileName, fileSize, clientId? }): Promise<Document>` — always sets `status: DOCUMENT_STATUS.PENDING` regardless of input.
-- `findAll(clientId?): Promise<Document[]>` — **returns `[]` immediately if `clientId` is falsy/blank**, without querying the DB. Otherwise `where: { clientId: clientId.trim() }`, `orderBy: createdAt desc`.
-- `findById(id): Promise<Document | null>` — plain `findUnique({ where: { id } })`, **no clientId filter at all**.
-- `updateStatus(id, status, errorMsg?): Promise<Document>` — sets `status` and `errorMsg` (`null` if not given, clearing any prior error).
-- `updateProcessingResult(id, { pageCount, status, errorMsg? }): Promise<Document>` — used at the end of processing to set final page count + status together.
-- `delete(id): Promise<Document>` — plain `delete({ where: { id } })`; relies on Prisma cascade for children (see [[Model-Document]]).
+- `create(data: { title, fileName, fileSize, storageKey?, owner: RequestOwner }): Promise<Document>` — sets `userId`/`guestSessionId` from `owner.type` (exactly one is set, never both), `status: PENDING`.
+- `findAll(owner): Promise<Document[]>` / `findRecent(owner, limit = 5): Promise<Document[]>` — both filter by `{ userId: owner.id }` or `{ guestSessionId: owner.id }` depending on `owner.type` (helper `ownerWhere(owner)`); `findRecent` orders by `lastAccessedAt desc` instead of `createdAt desc`.
+- `findById(id): Promise<Document | null>` — plain `findUnique`, **still no ownership filter** (unchanged from before).
+- `findOwnedById(id, owner): Promise<Document | null>` (**new** — the method every service should call) — `findById` then checks `doc.userId !== owner.id` / `doc.guestSessionId !== owner.id` depending on `owner.type`, returning `null` on mismatch instead of the document.
+- `touchAccessed(id): Promise<void>` (**new**) — sets `lastAccessedAt: new Date()`. Called by [[document.service]]`.getById` on every successful fetch.
+- `updateStorageKey(id, storageKey): Promise<Document>` (**new**) — currently unused (storageKey is set at `create` time instead), kept for a future "attach a file after the fact" path.
+- `updateStatus`/`updateProcessingResult`/`delete` — unchanged.
+- `migrateGuestDocuments(guestSessionId, userId): Promise<number>` (**new**) — `updateMany({ where: { guestSessionId }, data: { userId, guestSessionId: null } })`. This single call is the entire "guest data merges into your account" feature — see [[auth.service]].
 
 ## Source
 `server/src/repositories/document.repository.ts`
 
 ## Dependencies
-- Imports: `prisma` from [[processor|db.ts]], `DOCUMENT_STATUS` constant.
-- Used by: [[document.service]] (all methods), [[chat.service]] (`findById` in `prepareChat`/`getHistory`), [[command.service]] (`findById`), [[processing.service]] (`updateStatus`, `findById`, `updateProcessingResult`).
+- Imports: `prisma` from `db.ts`, `DOCUMENT_STATUS`, `RequestOwner` type.
+- Used by: [[document.service]] (all methods), [[chat.service]]/[[command.service]] (`findOwnedById`), [[processing.service]] (`updateStatus`, `findById`, `updateProcessingResult`), [[auth.service]] (`migrateGuestDocuments`).
 
 ## Related
 - [[Model-Document]]
 - [[document.service]]
-- [[Known-Issues-and-Conventions#Document queries must stay scoped per client]]
+- [[auth.service]]
+- [[Known-Issues-and-Conventions#Document queries must stay scoped per owner (`RequestOwner`, not a raw string)]]
 
 ## Notes
-**This is the layer where the cross-user leakage bug (fixed in commit `47d92bf`) lived.** `findById` still has no ownership filter by design — every caller is expected to compare `doc.clientId` against the caller's `clientId` itself after fetching (as [[document.service]] does). If you add a new repository method that returns a `Document` by ID, do not assume it's tenant-safe — it isn't, and the calling service must enforce that.
+`findById` is intentionally still unscoped — it's a low-level primitive used internally (e.g. by `migrateGuestDocuments`'s bulk update, which doesn't need per-row ownership checks). The rule going forward: any code path that hands a `Document` back to an external caller (a controller response) must go through `findOwnedById`, never bare `findById`. This mirrors the exact gap that `47d92bf` originally fixed for `findAll` — don't reintroduce it for a new method by reaching for `findById` out of convenience.
