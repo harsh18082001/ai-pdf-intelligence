@@ -18,4 +18,4 @@ Alternate anonymous-ID generator/persister. **Not imported anywhere else in the 
 - [[Known-Issues-and-Conventions#Supabase client is installed but unused]]
 
 ## Notes
-Duplicate/earlier implementation of the same idea as `AuthContext.getStoredClientId()`, under a different localStorage key (`dociq_user_id` vs `dociq_client_id`). Do not import this thinking it's the active identity mechanism — `AuthContext.ts`'s `dociq_client_id` is what the API layer and backend actually key off of.
+Was already dead code before the auth overhaul (a duplicate/earlier implementation of the same idea as the old `AuthContext.getStoredClientId()`), and remains dead code after it — [[AuthContext]] no longer generates any client-side identity string at all (real identity is now server-issued, see [[Auth-System]]), so this file has even less claim to relevance than before. Do not import this thinking it's part of the active identity mechanism.

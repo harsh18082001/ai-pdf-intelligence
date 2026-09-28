@@ -1,25 +1,13 @@
 ---
-tags: [frontend, lib]
+tags: [frontend, lib, retired]
 ---
 ## Purpose
-Plain localStorage read/write functions backing the "recently viewed documents" sidebar list — capped at 5, most-recent first.
+**Retired.** This file (`client/src/lib/recent-documents.ts`) was deleted during the enterprise-auth overhaul — "recent documents" moved from a per-browser `localStorage` list to a server-tracked `Document.lastAccessedAt` field, scoped to the caller's owner (guest or user). See [[useRecentDocuments]] and [[document.service]] for the current implementation.
 
-## Key Details
-- `getRecentDocuments(): RecentDocument[]` — reads and JSON-parses `localStorage['dociq-recent-documents']`, defensively returning `[]` on any parse error or missing key.
-- `pushRecentDocument(id, title): RecentDocument[]` — removes any existing entry for `id` (dedupe), prepends a new `{ id, title, visitedAt: Date.now() }`, slices to the 5 most recent, writes back to localStorage, and returns the new list.
-- No React dependency — pure functions, wrapped by [[useRecentDocuments]] for component use.
-
-## Source
-`client/src/lib/recent-documents.ts`
-
-## Dependencies
-- No imports.
-- Used by: [[useRecentDocuments]] (the only consumer — don't call these directly from a component, go through the hook so `storage`-event resync and React state updates stay correct).
+## Notes
+Kept as a stub (not deleted outright) per this vault's convention for retired files — see `000-Home.md`'s "(retired)" entries. If you find a reference to `getRecentDocuments`/`pushRecentDocument`/`dociq-recent-documents` anywhere, it's stale.
 
 ## Related
 - [[useRecentDocuments]]
-- [[AppSidebar]]
-- [[DocumentPage]]
-
-## Notes
-`MAX_RECENT` (5) and the storage key (`dociq-recent-documents`) are both module-level constants here — change them here, not in the hook, if that ever needs adjusting.
+- [[document.service]]
+- [[Known-Issues-and-Conventions#Auth is now real: email/password + server-issued guest sessions]]

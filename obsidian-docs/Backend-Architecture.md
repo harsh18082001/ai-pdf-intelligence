@@ -8,20 +8,24 @@ Cross-cutting map of the server: request lifecycle, DB/auth approach, background
 
 ### Request lifecycle (`app.ts`)
 1. `app.set('trust proxy', 1)` — for correct client IP behind Vercel.
-2. `cors({ origin: true, credentials: true, allowedHeaders: [...,'x-client-id',...] })`
+2. `cors({ origin: env.CORS_ORIGIN, credentials: true, allowedHeaders: [...,'x-csrf-token',...] })` — locked to one explicit origin now, not `origin: true` (reflect-any-origin) — see [[Known-Issues-and-Conventions]].
 3. `helmet()` — security headers.
-4. `express.json()`, `express.urlencoded({ extended: true })`
-5. `express-fileupload({ limits: { fileSize: MAX_FILE_SIZE_MB * 1MB }, abortOnLimit: true, useTempFiles: false })` — populates `req.files`.
-6. `generalLimiter` ([[rate-limiter]]) — global 100 req/15min per IP.
-7. `app.use('/api', apiRoutes)` — see [[routes-index|routes/index.ts]]: mounts [[document.routes]] at `/documents`, [[chat.routes]] at `/documents/:documentId/chat`, [[command.routes]] at `/commands`.
-8. `notFoundHandler` then `errorHandler` ([[error-handler]]) — catch-all 404 and the single error→JSON translator.
+4. `cookie-parser` — parses `dociq_guest_id`/`dociq_refresh`/`dociq_csrf` cookies onto `req.cookies`.
+5. `express.json()`, `express.urlencoded({ extended: true })`
+6. `express-fileupload({ limits: { fileSize: MAX_FILE_SIZE_MB * 1MB }, abortOnLimit: true, useTempFiles: false })` — populates `req.files`.
+7. `generalLimiter` ([[rate-limiter]]) — global 100 req/15min per IP.
+8. [[guest-session.middleware]] — sets `req.owner` to at least a guest.
+9. [[auth.middleware]] — upgrades `req.owner` to a user if a valid access token is present.
+10. [[csrf.middleware]] — issues the CSRF cookie; rejects non-safe methods without a matching `x-csrf-token` header.
+11. `app.use('/api', apiRoutes)` — see [[routes-index|routes/index.ts]]: mounts [[auth.routes]] at `/auth`, [[document.routes]] at `/documents`, [[chat.routes]] at `/documents/:documentId/chat`, [[command.routes]] at `/commands`.
+12. `notFoundHandler` then `errorHandler` ([[error-handler]]) — catch-all 404 and the single error→JSON translator.
 - Entry point `index.ts`: `app.listen(env.PORT, ...)`, plus `SIGTERM`/`SIGINT` graceful shutdown (`server.close()`).
 
 ### Database
-PostgreSQL, hosted on Supabase, accessed exclusively through Prisma (`server/src/db.ts` exports a singleton `PrismaClient`, cached on `globalThis` in dev to survive hot-reload). Four models — see [[Model-Document]], [[Model-Chunk]], [[Model-Message]], [[Model-AIArtifact]] — each with a matching repository (`*.repository.ts`) that is the only code allowed to call `prisma.*` directly; services never import `prisma` themselves.
+PostgreSQL, hosted on Supabase (accessed via a pooled `DATABASE_URL` at runtime and a direct `DIRECT_URL` for `prisma migrate` — see [[ENV-Variables]]), through Prisma (`server/src/db.ts` exports a singleton `PrismaClient`, cached on `globalThis` in dev to survive hot-reload). Seven models now — `User`/`Session`/`VerificationToken` (auth, see [[Auth-System]]) plus the original `Document`/`Chunk`/`Message`/`AIArtifact` — each with a matching repository (`*.repository.ts`) that is the only code allowed to call `prisma.*` directly; services never import `prisma` themselves.
 
 ### Auth / tenancy approach
-There is no real authentication. Every request optionally carries a `clientId` (an anonymous UUID minted client-side — see [[AuthContext]]), read by each controller's local `getClientId(req)` helper (checks `x-client-id` header → `clientId` query → `clientId` body, duplicated across [[document.controller]] and [[chat.controller]]). Tenancy enforcement is **inconsistent across the codebase** — see [[Known-Issues-and-Conventions]] for the exact gaps (chat history read, command execution).
+Real authentication now: email/password with Argon2id hashing, JWT access + rotating refresh tokens, plus a server-issued signed guest session for unauthenticated use — see [[Auth-System]] for the full picture. Every request resolves to a `RequestOwner` (`req.owner`) via two chained middlewares ([[guest-session.middleware]] then [[auth.middleware]]), and every document/chat/command controller reads `req.owner` directly instead of parsing headers itself. Tenancy enforcement is now **consistent** across the codebase — the previously-documented gaps (chat history read, command execution) are closed; see [[Known-Issues-and-Conventions]] for that history.
 
 ### Background processing pipeline
 Despite the `workers/` folder name, there is no queue or separate process. Upload → [[document.service]]`.upload()` → **awaits** `processDocumentAsync()` ([[processor]]) → [[processing.service]]`.processDocument()` runs extract → OCR-check → chunk → embed → persist (Postgres + Pinecone) inline, synchronously, within the same HTTP request/response cycle. This is deliberate for Vercel serverless compatibility (a detached background task would be killed once the response returns). See [[Data-Flow#1. Upload flow]].
@@ -51,6 +55,10 @@ Ties together every backend note in this vault.
 - [[rate-limiter]]
 - [[processor]]
 - [[processing.service]]
+- [[Auth-System]]
+- [[guest-session.middleware]]
+- [[auth.middleware]]
+- [[csrf.middleware]]
 - [[ENV-Variables]]
 - [[API-Contract]]
 - [[Data-Flow]]

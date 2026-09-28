@@ -5,15 +5,10 @@ tags: [backend, controller]
 HTTP/SSE handlers for chat: history read, non-streaming send, streaming send.
 
 ## Key Details
-- `getClientId(req)` — same helper as [[document.controller]] (duplicated, not shared).
-- `sendMessage(req, res: Response<ApiResponse<{ message: string }>>)`: parses `documentId` from `req.params.documentId`, reads `message` from `req.body`, calls `chatService.sendMessage(documentId, message, clientId)`, responds `200` with `{ message: response }`.
-- `streamMessage(req, res)` — **not wrapped in the `ApiResponse` envelope**, writes raw SSE:
-  1. Validates `documentId` (plain JSON 400 response if invalid, not `AppError`/`asyncHandler` — because headers may already need custom handling).
-  2. Reads `message` from `req.query.message` (400 if missing).
-  3. `res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' })`, `res.flushHeaders()`.
-  4. Calls `chatService.streamMessage(documentId, message, onChunk, clientId)` where `onChunk = (chunk) => res.write(`data: ${JSON.stringify(chunk)}\n\n`)`.
-  5. On completion: `res.write('data: [DONE]\n\n'); res.end()`. On error: logs, writes `data: {"error": ...}`, ends.
-- `getChatHistory(req, res: Response<ApiResponse<MessageDTO[]>>)`: parses `documentId`, calls `chatService.getHistory(documentId)` (note: **no `clientId` passed** — see Notes), responds with the message array.
+- No local `getClientId()` helper anymore — reads `req.owner` directly (same as [[document.controller]]).
+- `sendMessage(req, res: Response<ApiResponse<{ message: string }>>)`: parses `documentId`, reads `message` from `req.body`, calls `chatService.sendMessage(documentId, message, req.owner)`, responds `200` with `{ message: response }`.
+- `streamMessage(req, res)` — **not wrapped in the `ApiResponse` envelope**, writes raw SSE. Same structure as before, now passes `req.owner` (captured into a local `owner` const before the SSE headers are written, since `req.owner` could theoretically be read again after `res.writeHead` but there's no reason to re-touch `req` mid-stream).
+- `getChatHistory(req, res: Response<ApiResponse<MessageDTO[]>>)`: parses `documentId`, calls `chatService.getHistory(documentId, req.owner)` — **now ownership-checked** (previously called with no owner argument at all).
 
 ## Source
 `server/src/controllers/chat.controller.ts`
@@ -27,6 +22,7 @@ HTTP/SSE handlers for chat: history read, non-streaming send, streaming send.
 - [[chat.service]]
 - [[useChat]]
 - [[Data-Flow#2. Chat message flow]]
+- [[Known-Issues-and-Conventions#Chat history and commands are now tenant-scoped too (previously a known gap — closed)]]
 
 ## Notes
-`getChatHistory` does not extract or forward `clientId` at all, and [[chat.service]]`.getHistory()` only checks the document exists — **it does not check `doc.clientId` matches the caller**, unlike `sendMessage`/`streamMessage` (via `prepareChat`) which do. In other words, chat history for any document ID is readable by anyone who knows/guesses the numeric ID, even though sending new messages to it is gated. If you touch this controller, don't assume history-read is already ownership-scoped — see [[Known-Issues-and-Conventions]].
+`getChatHistory` used to be the one read path in the backend with zero tenant scoping — that's closed now (see [[chat.service]]). If you're reading an older mental model of this file, the "any caller who knows a documentId can read its chat history" gap no longer exists.

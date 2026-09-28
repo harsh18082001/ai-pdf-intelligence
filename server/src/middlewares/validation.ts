@@ -28,3 +28,35 @@ export const commandSchema = z.object({
 export const idParamSchema = z.object({
   id: z.string().regex(/^\d+$/, 'ID must be a numeric string'),
 });
+
+const passwordSchema = z
+  .string()
+  .min(10, 'Password must be at least 10 characters')
+  .max(128, 'Password is too long')
+  .refine((val) => /[a-z]/.test(val) && /[A-Z]/.test(val) && /[0-9]/.test(val), {
+    message: 'Password must contain uppercase, lowercase, and a number',
+  });
+
+export const registerSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Invalid email address'),
+  password: passwordSchema,
+  name: z.string().trim().min(1).max(100).optional(),
+});
+
+export const loginSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Invalid email address'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Invalid email address'),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token is required'),
+  password: passwordSchema,
+});
+
+export const resendVerificationSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Invalid email address'),
+});

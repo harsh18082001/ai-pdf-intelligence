@@ -8,10 +8,19 @@ export const documentApi = baseApi.injectEndpoints({
       transformResponse: (response: ApiResponse<DocumentDTO[]>) => response.data || [],
       providesTags: ['Document'],
     }),
+    getRecentDocuments: builder.query<DocumentDTO[], void>({
+      query: () => '/documents/recent',
+      transformResponse: (response: ApiResponse<DocumentDTO[]>) => response.data || [],
+      providesTags: ['Document'],
+    }),
     getDocument: builder.query<DocumentDTO, number>({
       query: (id) => `/documents/${id}`,
       transformResponse: (response: ApiResponse<DocumentDTO>) => response.data!,
       providesTags: (_result, _error, id) => [{ type: 'Document', id }],
+    }),
+    getDocumentFileUrl: builder.query<string, number>({
+      query: (id) => `/documents/${id}/file`,
+      transformResponse: (response: ApiResponse<{ url: string }>) => response.data!.url,
     }),
     uploadDocument: builder.mutation<DocumentDTO, File>({
       query: (file) => {
@@ -38,7 +47,9 @@ export const documentApi = baseApi.injectEndpoints({
 
 export const {
   useGetDocumentsQuery,
+  useGetRecentDocumentsQuery,
   useGetDocumentQuery,
+  useGetDocumentFileUrlQuery,
   useUploadDocumentMutation,
   useDeleteDocumentMutation,
 } = documentApi;

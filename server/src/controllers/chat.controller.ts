@@ -4,33 +4,17 @@ import { AppError } from '../middlewares/error-handler.js';
 import type { ApiResponse, MessageDTO } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 
-function getClientId(req: Request): string | undefined {
-  const headerId = req.headers['x-client-id'];
-  if (typeof headerId === 'string' && headerId.trim().length > 0) {
-    return headerId.trim();
-  }
-  const queryId = req.query.clientId;
-  if (typeof queryId === 'string' && queryId.trim().length > 0) {
-    return queryId.trim();
-  }
-  const bodyId = req.body?.clientId;
-  if (typeof bodyId === 'string' && bodyId.trim().length > 0) {
-    return bodyId.trim();
-  }
-  return undefined;
-}
-
 export const sendMessage = async (
   req: Request,
   res: Response<ApiResponse<{ message: string }>>,
 ) => {
   const documentId = parseInt((req.params.documentId as string) || '0', 10);
   if (isNaN(documentId)) throw new AppError('Invalid document ID', 400);
+  if (!req.owner) throw new AppError('Unable to identify request', 401);
 
   const { message } = req.body;
-  const clientId = getClientId(req);
 
-  const response = await chatService.sendMessage(documentId, message, clientId);
+  const response = await chatService.sendMessage(documentId, message, req.owner);
 
   res.status(200).json({
     success: true,
@@ -51,7 +35,11 @@ export const streamMessage = async (req: Request, res: Response) => {
     return;
   }
 
-  const clientId = getClientId(req);
+  if (!req.owner) {
+    res.status(401).json({ success: false, error: 'Unable to identify request' });
+    return;
+  }
+  const owner = req.owner;
 
   // Set headers for Server-Sent Events
   res.writeHead(200, {
@@ -69,7 +57,7 @@ export const streamMessage = async (req: Request, res: Response) => {
       (chunk) => {
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
       },
-      clientId,
+      owner,
     );
 
     res.write('data: [DONE]\n\n');
@@ -84,8 +72,9 @@ export const streamMessage = async (req: Request, res: Response) => {
 export const getChatHistory = async (req: Request, res: Response<ApiResponse<MessageDTO[]>>) => {
   const documentId = parseInt((req.params.documentId as string) || '0', 10);
   if (isNaN(documentId)) throw new AppError('Invalid document ID', 400);
+  if (!req.owner) throw new AppError('Unable to identify request', 401);
 
-  const history = await chatService.getHistory(documentId);
+  const history = await chatService.getHistory(documentId, req.owner);
 
   res.status(200).json({
     success: true,

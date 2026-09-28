@@ -9,19 +9,20 @@ import {
 } from '../ai/prompts/templates.js';
 import { AppError } from '../middlewares/error-handler.js';
 import { ARTIFACT_TYPES, DOCUMENT_STATUS } from '../config/constants.js';
-import type { AIArtifactDTO } from '../types/index.js';
+import type { AIArtifactDTO, RequestOwner } from '../types/index.js';
 
 class CommandService {
   async execute(
     documentId: number,
     command: string,
+    owner: RequestOwner,
     regenerate: boolean = false,
   ): Promise<AIArtifactDTO> {
     if (!ARTIFACT_TYPES.includes(command)) {
       throw new AppError(`Invalid command: ${command}`, 400);
     }
 
-    const doc = await documentRepository.findById(documentId);
+    const doc = await documentRepository.findOwnedById(documentId, owner);
     if (!doc) throw new AppError('Document not found', 404);
     if (doc.status !== DOCUMENT_STATUS.COMPLETED) {
       throw new AppError('Document is not ready. Current status: ' + doc.status, 400);

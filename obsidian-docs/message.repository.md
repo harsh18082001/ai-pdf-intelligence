@@ -22,4 +22,4 @@ Direct Prisma access for the `Message` table.
 - [[chat.service]]
 
 ## Notes
-No ownership/clientId filtering here either — same pattern as the other repositories; enforcement is the calling service's job (and [[chat.service]]`.getHistory` currently does **not** enforce it — see [[chat.controller]] Notes).
+No ownership filtering here either — same pattern as the other repositories; enforcement is the calling service's job. [[chat.service]]`.getHistory` now does this correctly ([[document.repository]]`.findOwnedById` before ever reaching this repository) — the previously-documented gap where history reads skipped that check is closed, see [[chat.controller]].
